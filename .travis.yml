@@ -1,0 +1,9 @@
+language: go
+go:
+  - 1.11.5
+
+install:
+  - # an empty install saves the hassle of pseudo-getting deps (they're vendored, so no need!)
+
+script:
+  - go test ./...
