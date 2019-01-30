@@ -1,5 +1,7 @@
 # `tgen`
 
+[![Build Status](https://travis-ci.org/patrickdappollonio/tgen.svg?branch=master)](https://travis-ci.org/patrickdappollonio/tgen)
+
 `tgen` is a simple CLI application that allows you to write a template file and then use the power of Go Templates to generate an output (which is) outputted to `stdout`. Besides the Go Template engine itself, `tgen` contains three extra utility functions to assist you when writing templates. See below for a description of each.
 
 You can also use the `--help` (or `-h`) to see the available set of options. The only flag required is the file to process, and everything else is optional.
