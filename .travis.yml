@@ -1,9 +1,20 @@
 language: go
-go:
-  - 1.11.5
 
-install:
-  - # an empty install saves the hassle of pseudo-getting deps (they're vendored, so no need!)
+go:
+- 1.11.5
+
+install: true
 
 script:
-  - go test ./...
+- go test ./...
+- GOOS=linux go build -a -tags netgo -ldflags '-s -w' -o binaries/tgen_linux
+
+deploy:
+  provider: releases
+  api_key:
+    secure: lIiM84hr5XKepM7TLp1o8ldTVq1s1y+gQxVMx/9R+Afkkkk2ChMd7uzwjxEnIcg9W94D9LqaDBsFXFACh8HuNTgukI4Cw29/NB47mOO2nr+DO2iim6HUvu09w+nxqGs/6DLRFK6dq+ZvCFlmDYUKqPocGG5wbMeeQ9HshDkp9mx9Wl8TqAn5A92HkyWHFQBCwB+OOfw9i2npSGNWxryOOO/FLp7RgsNvfSlVeFB+GmBxpYyyJvIk+N51OxGKeKhoitZ4kdvv1g+lOXmoxG5NwPdoTamVr5b/p3K2Jz1roiYpN7P3CNC0Z48xiPpabNcKg81tZGlyKfMSwzp/Ewy0+Ry/1sYT7huyozYaCxyc9w79n+cF0DEzxF3ajsfcHyP9JdxuWK1oysbjtrWCdFnvb3ay/8AIt3XAHMqQ1yIa5CR6Bla2UKRlahhMTuyWtD+GAGoqLtffeyAKaQqkvIruhyUB0S4VW3D+yD9HERUHJM6iv02lhP8Z3M/9zb1IQ9YfCk2G+tOkVWO11fUmhKErBjm/VJZ0JJ/IO8uYrHj7+MAEfBlojIwDRCvPGXS6+f4QKaUzB4UeqDCDKPxdLsJoxs9NLg+/CuNf0Wer1DdECFU7I6wztTVCiIatDPuZWyP+mPkINNWqKdSxyUPEabKym4bi/7l5wsRVntNLhYpUUWI=
+  file_glob: true
+  file: binaries/*
+  skip_cleanup: true
+  on:
+    tags: true
