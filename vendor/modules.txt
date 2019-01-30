@@ -1,0 +1,6 @@
+# github.com/inconshreveable/mousetrap v0.0.0-20141017200713-76626ae9c91c
+github.com/inconshreveable/mousetrap
+# github.com/spf13/cobra v0.0.0-20180427134550-ef82de70bb3f
+github.com/spf13/cobra
+# github.com/spf13/pflag v0.0.0-20180412120913-583c0c0531f0
+github.com/spf13/pflag
