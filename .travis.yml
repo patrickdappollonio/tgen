@@ -1,7 +1,10 @@
 language: go
 
 go:
-- 1.11.5
+- 1.12.1
+
+before_install:
+  - sudo apt-get update && sudo apt-get install -y upx
 
 install: true
 
@@ -9,7 +12,8 @@ script:
 - go test ./...
 - if [ -z "$TRAVIS_TAG" ]; then exit 0; else
   GOOS=linux go build -a -tags netgo -ldflags "-s -w -X main.version=$TRAVIS_TAG" -o binaries/tgen_linux &&
-  GOOS=darwin go build -a -tags netgo -ldflags "-s -w -X main.version=$TRAVIS_TAG" -o binaries/tgen_darwin;
+  GOOS=darwin go build -a -tags netgo -ldflags "-s -w -X main.version=$TRAVIS_TAG" -o binaries/tgen_darwin &&
+  upx --brute binaries/tgen_linux ;
   fi
 
 deploy:

@@ -19,13 +19,13 @@ var (
 	delimiter string
 	version   = "development"
 
-	virtualenv = make(map[string]string)
+	envvars = make(map[string]string)
 )
 
 var root = &cobra.Command{
 	Use:     os.Args[0],
 	Short:   os.Args[0] + " is a template generator with the power of Go Templates",
-	Version: getVersion(version),
+	Version: version,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return command(os.Stdout, delimiter, templatefile, envfile)
 	},
@@ -39,7 +39,7 @@ var t = template.New(os.Args[0]).Funcs(template.FuncMap{
 			return v
 		}
 
-		return virtualenv[k]
+		return envvars[k]
 	},
 	"raw": func(s string) string {
 		return s
@@ -61,14 +61,6 @@ func main() {
 	if err := root.Execute(); err != nil {
 		os.Exit(1)
 	}
-}
-
-func getVersion(v string) string {
-	if v[0] == 'd' {
-		return v
-	}
-
-	return "v" + v
 }
 
 func command(w io.Writer, delim, tmpl, env string) error {
@@ -144,7 +136,7 @@ func loadVirtualEnv(fp string) error {
 			continue
 		}
 
-		virtualenv[k] = v
+		envvars[k] = v
 	}
 
 	return nil

@@ -6,27 +6,6 @@ import (
 	"testing"
 )
 
-func TestVersion(t *testing.T) {
-	cases := []struct {
-		sent     string
-		expected string
-	}{
-		{"1.2.0", "v1.2.0"},
-		{"2.2", "v2.2"},
-		{"3", "v3"},
-		{"development", "development"},
-		{"devel", "devel"},
-	}
-
-	for _, v := range cases {
-		t.Run(v.expected, func(tt *testing.T) {
-			if expected := getVersion(v.sent); v.expected != expected {
-				tt.Fatalf("expecting %q, but got %q for string %q", v.expected, expected, v.sent)
-			}
-		})
-	}
-}
-
 func TestDelimiter(t *testing.T) {
 	cases := []struct {
 		sent  string
@@ -106,7 +85,7 @@ MY_UPPER=abc`
 		t.Fatalf("not expecting an error loading virtualenv, got %s", err.Error())
 	}
 
-	upper, found := virtualenv["MY_CONST_USER"]
+	upper, found := envvars["MY_CONST_USER"]
 	if !found {
 		t.Fatalf("expecting to find key MY_CONST_USER, but wasn't found in virtualenv")
 	}
@@ -115,7 +94,7 @@ MY_UPPER=abc`
 		t.Fatalf("expecting MY_CONST_USER to say \"demo\" but got %q", upper)
 	}
 
-	lower, found := virtualenv["MY_UPPER"]
+	lower, found := envvars["MY_UPPER"]
 	if !found {
 		t.Fatalf("expecting to find key MY_UPPER, but wasn't found in virtualenv")
 	}
