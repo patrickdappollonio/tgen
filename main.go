@@ -5,10 +5,12 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	texttemp "text/template"
 
 	"github.com/spf13/cobra"
 )
@@ -19,28 +21,47 @@ var (
 	delimiter string
 	version   = "development"
 
+	strict = false
+
 	envvars = make(map[string]string)
 )
 
 var root = &cobra.Command{
-	Use:     os.Args[0],
-	Short:   os.Args[0] + " is a template generator with the power of Go Templates",
-	Version: version,
+	Use:          os.Args[0],
+	Short:        os.Args[0] + " is a template generator with the power of Go Templates",
+	Version:      version,
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return command(os.Stdout, delimiter, templatefile, envfile)
 	},
 }
 
+type enotfounderr struct{ name string }
+
+func (e *enotfounderr) Error() string {
+	return "strict mode on: environment variable not found: $" + e.name
+}
+
+var envfunc = func(k string) (string, error) {
+	k = strings.ToUpper(k)
+
+	if v, found := os.LookupEnv(k); found {
+		return v, nil
+	}
+
+	if v, found := envvars[k]; found {
+		return v, nil
+	}
+
+	if strict {
+		return "", &enotfounderr{name: k}
+	}
+
+	return "", nil
+}
+
 var t = template.New(os.Args[0]).Funcs(template.FuncMap{
-	"env": func(k string) string {
-		k = strings.ToUpper(k)
-
-		if v, found := os.LookupEnv(k); found {
-			return v
-		}
-
-		return envvars[k]
-	},
+	"env": envfunc,
 	"raw": func(s string) string {
 		return s
 	},
@@ -48,12 +69,31 @@ var t = template.New(os.Args[0]).Funcs(template.FuncMap{
 	"sprintf": func(s string, args ...interface{}) string {
 		return fmt.Sprintf(s, args...)
 	},
+
+	"envdefault": func(k, defval string) (string, error) {
+		s, err := envfunc(k)
+
+		if err != nil {
+			if _, ok := err.(*enotfounderr); ok {
+				return defval, nil
+			}
+
+			return "", err
+		}
+
+		if s != "" {
+			return s, nil
+		}
+
+		return defval, nil
+	},
 })
 
 func init() {
 	root.Flags().StringVarP(&envfile, "environment", "e", "", "an optional environment file to use (key=value formatted) to perform replacements")
 	root.Flags().StringVarP(&templatefile, "file", "f", "", "the template file to process (required)")
 	root.Flags().StringVarP(&delimiter, "delimiter", "d", "", `delimiter (default "{{}}")`)
+	root.Flags().BoolVarP(&strict, "strict", "s", false, "enables strict mode: if an environment variable in the file is defined but not set, it'll fail")
 	root.MarkFlagRequired("file")
 }
 
@@ -91,8 +131,20 @@ func executeTemplate(w io.Writer, b *bytes.Buffer) error {
 		return fmt.Errorf("unable to parse template file %q: %s", templatefile, err.Error())
 	}
 
-	if err := tmpl.Execute(os.Stdout, nil); err != nil {
-		return fmt.Errorf("unable to process template %q: %s", templatefile, err.Error())
+	var temp bytes.Buffer
+
+	if err := tmpl.Execute(&temp, nil); err != nil {
+		if _, ok := err.(texttemp.ExecError); ok {
+			if strings.Contains(err.Error(), "environment variable not found") {
+				return &enotfounderr{name: err.Error()[strings.LastIndex(err.Error(), ": $")+3:]}
+			}
+		}
+
+		return err
+	}
+
+	if _, err := io.Copy(os.Stdout, &temp); err != nil {
+		return err
 	}
 
 	return nil
