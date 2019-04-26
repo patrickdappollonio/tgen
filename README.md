@@ -26,6 +26,8 @@ Flags:
 * `{{ envdefault "NAME" "my name" }}`: `envdefault` allows you to fetch the value of an environment variable, and if it wasn't found, then set the value to `"my name"`. It's also case insensitive.
 * `{{ raw "ABC123" }}`: `raw` will print a raw output. While this may seem cumbersome, some functions may output a buffer that needs to be rendered here, so this function can take it and spit it out.
 * `{{ sprintf "format" }}`: `sprintf` works the same way as Go's `fmt.Sprintf()`, it allows you to pass a string format, for example, `"Hello, %s!"` and then zero or more arguments of any type, then uses `fmt.Sprintf()` under the hood to print it out. For example, calling `{{ sprintf "Hello, %s!" "Peter" }}` will print `Hello, Peter!`
+* `{{ rndstring 8 }}`: `rndstring` will create a randomized alphanumeric string of exactly 8 characters, and you can change 8 to be any number for any length.
+* `{{ lowercase | uppercase | title }}`: these three handy functions, `lowercase`, `uppercase`, and `title` do exactly what you think it does, either set the text to lowercase, to uppercase or to title (first letter of each word uppercase, then the rest of the word lowercased).
 
 ### Environment file
 

@@ -36,58 +36,7 @@ var root = &cobra.Command{
 	},
 }
 
-type enotfounderr struct{ name string }
-
-func (e *enotfounderr) Error() string {
-	return "strict mode on: environment variable not found: $" + e.name
-}
-
-var envfunc = func(k string) (string, error) {
-	k = strings.ToUpper(k)
-
-	if v, found := os.LookupEnv(k); found {
-		return v, nil
-	}
-
-	if v, found := envvars[k]; found {
-		return v, nil
-	}
-
-	if strict {
-		return "", &enotfounderr{name: k}
-	}
-
-	return "", nil
-}
-
-var t = template.New(os.Args[0]).Funcs(template.FuncMap{
-	"env": envfunc,
-	"raw": func(s string) string {
-		return s
-	},
-
-	"sprintf": func(s string, args ...interface{}) string {
-		return fmt.Sprintf(s, args...)
-	},
-
-	"envdefault": func(k, defval string) (string, error) {
-		s, err := envfunc(k)
-
-		if err != nil {
-			if _, ok := err.(*enotfounderr); ok {
-				return defval, nil
-			}
-
-			return "", err
-		}
-
-		if s != "" {
-			return s, nil
-		}
-
-		return defval, nil
-	},
-})
+var t = template.New(os.Args[0]).Funcs(templateFunctions)
 
 func init() {
 	root.Flags().StringVarP(&envfile, "environment", "e", "", "an optional environment file to use (key=value formatted) to perform replacements")
