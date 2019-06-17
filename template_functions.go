@@ -24,17 +24,7 @@ func getTemplateFunctions(strict bool) template.FuncMap {
 		},
 
 		"envdefault": func(k, defval string) (string, error) {
-			s, err := envfunc(k, false)
-
-			if err != nil {
-				if _, ok := err.(*enotfounderr); ok {
-					return defval, nil
-				}
-
-				return "", err
-			}
-
-			if s != "" {
+			if s, _ := envfunc(k, false); s != "" {
 				return s, nil
 			}
 
