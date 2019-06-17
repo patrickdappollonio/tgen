@@ -8,6 +8,7 @@ before_install:
 
 env:
   - GO111MODULE=on
+  - GOFLAGS=-mod=vendor
 
 script:
   - go vet
