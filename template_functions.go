@@ -2,60 +2,64 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"math/rand"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 	"unsafe"
 )
 
-var templateFunctions = template.FuncMap{
-	"env": envfunc,
-	"raw": func(s string) string {
-		return s
-	},
+func getTemplateFunctions(strict bool) template.FuncMap {
+	return template.FuncMap{
+		"env": func(k string) (string, error) {
+			return envfunc(k, strict)
+		},
+		"raw": func(s string) string {
+			return s
+		},
 
-	"sprintf": func(s string, args ...interface{}) string {
-		return fmt.Sprintf(s, args...)
-	},
+		"sprintf": func(s string, args ...interface{}) string {
+			return fmt.Sprintf(s, args...)
+		},
 
-	"envdefault": func(k, defval string) (string, error) {
-		s, err := envfunc(k)
+		"envdefault": func(k, defval string) (string, error) {
+			s, err := envfunc(k, false)
 
-		if err != nil {
-			if _, ok := err.(*enotfounderr); ok {
-				return defval, nil
+			if err != nil {
+				if _, ok := err.(*enotfounderr); ok {
+					return defval, nil
+				}
+
+				return "", err
 			}
 
-			return "", err
-		}
+			if s != "" {
+				return s, nil
+			}
 
-		if s != "" {
-			return s, nil
-		}
+			return defval, nil
+		},
 
-		return defval, nil
-	},
-
-	"rndstring": rndgen,
-	"lowercase": strings.ToLower,
-	"uppercase": strings.ToUpper,
-	"title":     strings.Title,
+		"rndstring": rndgen,
+		"lowercase": strings.ToLower,
+		"uppercase": strings.ToUpper,
+		"title":     strings.Title,
+	}
 }
 
-func envfunc(k string) (string, error) {
+func envfunc(k string, strictMode bool) (string, error) {
 	k = strings.ToUpper(k)
 
 	if v, found := os.LookupEnv(k); found {
 		return v, nil
 	}
 
-	if v, found := envvars[k]; found {
+	if v, found := loadedEnvVars[k]; found {
 		return v, nil
 	}
 
-	if strict {
+	if strictMode {
 		return "", &enotfounderr{name: k}
 	}
 

@@ -85,7 +85,7 @@ MY_UPPER=abc`
 		t.Fatalf("not expecting an error loading virtualenv, got %s", err.Error())
 	}
 
-	upper, found := envvars["MY_CONST_USER"]
+	upper, found := loadedEnvVars["MY_CONST_USER"]
 	if !found {
 		t.Fatalf("expecting to find key MY_CONST_USER, but wasn't found in virtualenv")
 	}
@@ -94,7 +94,7 @@ MY_UPPER=abc`
 		t.Fatalf("expecting MY_CONST_USER to say \"demo\" but got %q", upper)
 	}
 
-	lower, found := envvars["MY_UPPER"]
+	lower, found := loadedEnvVars["MY_UPPER"]
 	if !found {
 		t.Fatalf("expecting to find key MY_UPPER, but wasn't found in virtualenv")
 	}

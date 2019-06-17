@@ -1,168 +1,90 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
-	"fmt"
-	"html/template"
-
+	"errors"
 	"io"
 	"os"
-	"path/filepath"
-	"strings"
-	texttemp "text/template"
+	"text/template"
 
 	"github.com/spf13/cobra"
 )
 
+const appName = "tgen"
+
+type conf struct {
+	environmentFile  string
+	templateFile     string
+	rawTemplate      string
+	customDelimiters string
+	strictMode       bool
+
+	t *template.Template
+}
+
 var (
-	envfile, templatefile string
-
-	delimiter string
-	version   = "development"
-
-	strict = false
-
-	envvars = make(map[string]string)
+	version       = "development"
+	loadedEnvVars = make(map[string]string)
 )
 
-var root = &cobra.Command{
-	Use:          os.Args[0],
-	Short:        os.Args[0] + " is a template generator with the power of Go Templates",
-	Version:      version,
-	SilenceUsage: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return command(os.Stdout, delimiter, templatefile, envfile)
-	},
-}
-
-var t = template.New(os.Args[0]).Funcs(templateFunctions)
-
-func init() {
-	root.Flags().StringVarP(&envfile, "environment", "e", "", "an optional environment file to use (key=value formatted) to perform replacements")
-	root.Flags().StringVarP(&templatefile, "file", "f", "", "the template file to process (required)")
-	root.Flags().StringVarP(&delimiter, "delimiter", "d", "", `delimiter (default "{{}}")`)
-	root.Flags().BoolVarP(&strict, "strict", "s", false, "enables strict mode: if an environment variable in the file is defined but not set, it'll fail")
-	root.MarkFlagRequired("file")
-}
-
 func main() {
+	var configs conf
+
+	var root = &cobra.Command{
+		Use:          appName,
+		Short:        appName + " is a template generator with the power of Go Templates",
+		Version:      version,
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return command(os.Stdout, configs)
+		},
+	}
+
+	root.Flags().StringVarP(&configs.environmentFile, "environment", "e", "", "an optional environment file to use (key=value formatted) to perform replacements")
+	root.Flags().StringVarP(&configs.templateFile, "file", "f", "", "the template file to process (required)")
+	root.Flags().StringVarP(&configs.customDelimiters, "delimiter", "d", "", `delimiter (default "{{}}")`)
+	root.Flags().StringVarP(&configs.rawTemplate, "execute", "x", "", "a raw template to execute directly, without providing --file")
+	root.Flags().BoolVarP(&configs.strictMode, "strict", "s", false, "enables strict mode: if an environment variable in the file is defined but not set, it'll fail")
+
+	configs.t = template.New(appName).Funcs(getTemplateFunctions(configs.strictMode))
+
 	if err := root.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
 
-func command(w io.Writer, delim, tmpl, env string) error {
-	if delim != "" {
-		l, r, err := getDelimiter(delim)
+func command(w io.Writer, c conf) error {
+	if c.customDelimiters != "" {
+		l, r, err := getDelimiter(c.customDelimiters)
 		if err != nil {
 			return err
 		}
 
-		t = t.Delims(l, r)
+		c.t = c.t.Delims(l, r)
 	}
 
-	b, err := loadFile(tmpl)
-	if err != nil {
-		return err
-	}
+	var b *bytes.Buffer
 
-	if err := loadVirtualEnv(env); err != nil {
-		return err
-	}
-
-	return executeTemplate(w, b)
-}
-
-func executeTemplate(w io.Writer, b *bytes.Buffer) error {
-	tmpl, err := t.Parse(b.String())
-	if err != nil {
-		return fmt.Errorf("unable to parse template file %q: %s", templatefile, err.Error())
-	}
-
-	var temp bytes.Buffer
-
-	if err := tmpl.Execute(&temp, nil); err != nil {
-		if _, ok := err.(texttemp.ExecError); ok {
-			if strings.Contains(err.Error(), "environment variable not found") {
-				return &enotfounderr{name: err.Error()[strings.LastIndex(err.Error(), ": $")+3:]}
-			}
+	if c.templateFile != "" {
+		bt, err := loadFile(c.templateFile)
+		if err != nil {
+			return err
 		}
 
+		b = bt
+	}
+
+	if c.rawTemplate != "" {
+		b = bytes.NewBufferString(c.rawTemplate)
+	}
+
+	if b == nil {
+		return errors.New("needs to specify either a template file (using --file) or a raw template (using --raw)")
+	}
+
+	if err := loadVirtualEnv(c.environmentFile); err != nil {
 		return err
 	}
 
-	if _, err := io.Copy(os.Stdout, &temp); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func loadFile(fp string) (*bytes.Buffer, error) {
-	tmplfile, err := filepath.Abs(fp)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get path to file %q: %s", fp, err.Error())
-	}
-
-	f, err := os.Open(tmplfile)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open file %q: %s", fp, err.Error())
-	}
-
-	defer f.Close()
-
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, f); err != nil {
-		return nil, fmt.Errorf("unable to read file %q: %s", fp, err.Error())
-	}
-
-	return &buf, nil
-}
-
-func loadVirtualEnv(fp string) error {
-	if fp == "" {
-		return nil
-	}
-
-	data, err := loadFile(fp)
-	if err != nil {
-		return err
-	}
-
-	sc := bufio.NewScanner(data)
-	for sc.Scan() {
-		k, v := parseLine(sc.Text())
-		if k == "" || v == "" {
-			continue
-		}
-
-		envvars[k] = v
-	}
-
-	return nil
-}
-
-func parseLine(line string) (string, string) {
-	if strings.HasPrefix(strings.TrimSpace(line), "#") {
-		return "", ""
-	}
-
-	items := strings.Split(line, "=")
-	if len(items) < 2 {
-		return "", ""
-	}
-
-	return strings.ToUpper(items[0]), strings.Join(items[1:], "=")
-}
-
-func getDelimiter(d string) (string, string, error) {
-	size := len(d)
-
-	if size < 2 || size%2 != 0 {
-		return "", "", fmt.Errorf("delimiter size needs to be multiple of two and have 2 or more characters")
-	}
-
-	div := size / 2
-	return d[:div], d[div:], nil
+	return executeTemplate(c.t, c.templateFile, w, b)
 }
