@@ -7,8 +7,9 @@ before_install:
   - sudo apt-get install -y upx
 
 env:
-  - GO111MODULE=on
-  - GOFLAGS=-mod=vendor
+  global:
+    - GO111MODULE=on
+    - GOFLAGS=-mod=vendor
 
 script:
   - go vet
