@@ -15,8 +15,10 @@ Usage:
 Flags:
   -d, --delimiter string     delimiter (default "{{}}")
   -e, --environment string   an optional environment file to use (key=value formatted) to perform replacements
+  -x, --execute string       a raw template to execute directly, without providing --file
   -f, --file string          the template file to process (required)
   -h, --help                 help for tgen
+  -s, --strict               enables strict mode: if an environment variable in the file is defined but not set, it'll fail
       --version              version for tgen
 ```
 
@@ -52,5 +54,15 @@ element=Oil
 After being passed to `tgen` by executing `tgen -e contents.env -f template.txt`, the output becomes:
 
 ```
+$ tgen -e contents.env -f template.txt
 The dog licked the Oil and everyone laughed.
 ```
+
+Using the inline mode to execute a template, you can also call `tgen -x '{{ env "element" }}' -e contents.env` (note the use of single-quotes since in Go, strings are always double-quoted) which will yield the same result:
+
+```
+$ tgen -x '{{ env "element" }}' -e contents.env
+The dog licked the Oil and everyone laughed.
+```
+
+Do note as well that using single quotes for the template allows you to prevent any bash special parsing logic that your terminal might have.
