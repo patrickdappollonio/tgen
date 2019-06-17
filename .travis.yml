@@ -10,6 +10,8 @@ install: true
 
 script:
 - go test ./...
+- go build -o tgen
+- ./tgen --version
 - if [ -z "$TRAVIS_TAG" ]; then exit 0; else
   GOOS=linux go build -mod vendor -a -tags netgo -ldflags "-s -w -X main.version=$TRAVIS_TAG" -o binaries/tgen_linux &&
   GOOS=darwin go build -mod vendor -a -tags netgo -ldflags "-s -w -X main.version=$TRAVIS_TAG" -o binaries/tgen_darwin &&
