@@ -46,14 +46,14 @@ func main() {
 	root.Flags().StringVarP(&configs.rawTemplate, "execute", "x", "", "a raw template to execute directly, without providing --file")
 	root.Flags().BoolVarP(&configs.strictMode, "strict", "s", false, "enables strict mode: if an environment variable in the file is defined but not set, it'll fail")
 
-	configs.t = template.New(appName).Funcs(getTemplateFunctions(configs.strictMode))
-
 	if err := root.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
 
 func command(w io.Writer, c conf) error {
+	c.t = template.New(appName).Funcs(getTemplateFunctions(c.strictMode))
+
 	if c.customDelimiters != "" {
 		l, r, err := getDelimiter(c.customDelimiters)
 		if err != nil {
