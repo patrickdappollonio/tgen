@@ -1,7 +1,7 @@
 language: go
 
 go:
-  - 1.12.6
+  - 1.13
 
 before_install:
   - sudo apt-get install -y upx
@@ -12,6 +12,7 @@ install:
 env:
   global:
     - GO111MODULE=on
+    - GOFLAGS="-mod=vendor"
 
 script:
   - go vet
