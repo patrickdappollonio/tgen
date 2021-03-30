@@ -12,29 +12,67 @@ import (
 
 func getTemplateFunctions(strict bool) template.FuncMap {
 	return template.FuncMap{
-		"env": func(k string) (string, error) {
-			return envfunc(k, strict)
-		},
+		"env": envstrict(strict),
+
 		"raw": func(s string) string {
 			return s
 		},
 
-		"sprintf": func(s string, args ...interface{}) string {
-			return fmt.Sprintf(s, args...)
-		},
-
-		"envdefault": func(k, defval string) (string, error) {
-			if s, _ := envfunc(k, false); s != "" {
-				return s, nil
-			}
-
-			return defval, nil
-		},
+		"envdefault": envdefault,
 
 		"rndstring": rndgen,
 		"lowercase": strings.ToLower,
+		"lower":     strings.ToLower,
 		"uppercase": strings.ToUpper,
+		"upper":     strings.ToUpper,
 		"title":     strings.Title,
+		"sprintf":   fmt.Sprintf,
+		"printf":    fmt.Sprintf,
+		"println":   fmt.Sprintln,
+		"trim":      strings.TrimSpace,
+
+		"trimPrefix": strings.TrimPrefix,
+		"trimSuffix": strings.TrimSuffix,
+
+		"repeat": func(count int, str string) string {
+			return strings.Repeat(str, count)
+		},
+
+		"nospace": func(str string) string {
+			return strings.NewReplacer(" ", "").Replace(str)
+		},
+
+		"quote":  quote,
+		"squote": squote,
+
+		"indent":  indent,
+		"nindent": nindent,
+	}
+}
+
+func indent(spaces int, v string) string {
+	pad := strings.Repeat(" ", spaces)
+	return pad + strings.Replace(v, "\n", "\n"+pad, -1)
+}
+
+func nindent(spaces int, v string) string {
+	return "\n" + indent(spaces, v)
+}
+
+func envdefault(k, defval string) (string, error) {
+	if s, _ := envfunc(k, false); s != "" {
+		return s, nil
+	}
+
+	return defval, nil
+}
+
+func quote(s string) string  { return `"` + s + `"` }
+func squote(s string) string { return `'` + s + `'` }
+
+func envstrict(strict bool) func(s string) (string, error) {
+	return func(s string) (string, error) {
+		return envfunc(s, strict)
 	}
 }
 
