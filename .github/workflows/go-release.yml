@@ -1,0 +1,39 @@
+on: release
+name: Release Go Application
+
+jobs:
+  release-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v2.0.0
+      - name: Compile and release for Linux amd64
+        uses: ngs/go-release.action@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GOARCH: amd64
+          GOOS: linux
+
+  release-darwin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v2.0.0
+      - name: Compile and release for Darwin amd64
+        uses: ngs/go-release.action@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GOARCH: amd64
+          GOOS: darwin
+
+  release-windows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v2.0.0
+      - name: Compile and release for Windows amd64
+        uses: ngs/go-release.action@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GOARCH: amd64
+          GOOS: windows
