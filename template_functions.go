@@ -1,9 +1,14 @@
 package main
 
 import (
+	"crypto/sha1"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -12,42 +17,98 @@ import (
 
 func getTemplateFunctions(strict bool) template.FuncMap {
 	return template.FuncMap{
-		"env": envstrict(strict),
-
 		"raw": func(s string) string {
 			return s
 		},
 
-		"envdefault": envdefault,
+		// Go built-ins
+		"lowercase":  strings.ToLower,    // "HELLO" → "hello"
+		"lower":      strings.ToLower,    // "HELLO" → "hello"
+		"uppercase":  strings.ToUpper,    // "hello" → "HELLO"
+		"upper":      strings.ToUpper,    // "hello" → "HELLO"
+		"title":      strings.Title,      // "hello" → "Hello"
+		"sprintf":    fmt.Sprintf,        // sprintf "Hello, %s" "world" → "Hello, world"
+		"printf":     fmt.Sprintf,        // printf "Hello, %s" "world" → "Hello, world"
+		"println":    fmt.Sprintln,       // println "Hello" "world!" → "Hello world!\n"
+		"trim":       strings.TrimSpace,  // trim "   hello   " → "hello"
+		"trimPrefix": strings.TrimPrefix, // trimPrefix "abcdef" "abc" → "def"
+		"trimSuffix": strings.TrimSuffix, // trimSuffix "abcdef" "def" → "abc"
+		"base":       filepath.Base,      // base "/foo/bar/baz" → "baz"
+		"dir":        filepath.Dir,       // dir "/foo/bar/baz" → "/foo/bar"
+		"clean":      filepath.Clean,     // clean "/foo/bar/../baz" → "/foo/baz"
+		"ext":        filepath.Ext,       // ext "/foo.zip" → ".zip"
+		"isAbs":      filepath.IsAbs,     // isAbs "foo.zip" → false
 
-		"rndstring": rndgen,
-		"lowercase": strings.ToLower,
-		"lower":     strings.ToLower,
-		"uppercase": strings.ToUpper,
-		"upper":     strings.ToUpper,
-		"title":     strings.Title,
-		"sprintf":   fmt.Sprintf,
-		"printf":    fmt.Sprintf,
-		"println":   fmt.Sprintln,
-		"trim":      strings.TrimSpace,
-
-		"trimPrefix": strings.TrimPrefix,
-		"trimSuffix": strings.TrimSuffix,
-
-		"repeat": func(count int, str string) string {
-			return strings.Repeat(str, count)
-		},
-
-		"nospace": func(str string) string {
-			return strings.NewReplacer(" ", "").Replace(str)
-		},
-
-		"quote":  quote,
-		"squote": squote,
-
-		"indent":  indent,
-		"nindent": nindent,
+		// Locally defined functions
+		"env":          envstrict(strict), // env "user" → "patrick"
+		"envdefault":   envdefault,        // env "SQL_HOST" "sql.example.com" → "sql.example.com"
+		"rndstring":    rndgen,            // rndstring 8 → "lFEqUUOJ"
+		"repeat":       repeat,            // repeat 3 "abc" → "abcabcabc"
+		"nospace":      nospace,           // nospace "hello world!" → "helloworld!"
+		"quote":        quote,             // quote "hey" → `"hey"`
+		"squote":       squote,            // squote "hey" → "'hey'"
+		"indent":       indent,            // indent 3 "abc" → "  abc"
+		"nindent":      nindent,           // nindent 3 "abc" → "\n   abc"
+		"b64enc":       base64encode,      // b64enc "abc" → "YWJj"
+		"base64encode": base64encode,      // base64encode "abc" → "YWJj"
+		"b64dec":       base64decode,      // b64dec "YWJj" → "abc"
+		"base64decode": base64decode,      // base64decode "YWJj" → "abc"
+		"sha1sum":      sha1sum,           // sha1sum "abc" → "a9993e364706816aba3e25717850c26c9cd0d89d"
+		"sha256sum":    sha256sum,         // sha256sum "abc" → "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+		"replace":      replace,           // replace "World" "Patrick" "Hello, World!" → "Hello, Patrick!"
+		"readfile":     readfile,          // readfile "foobar.txt" → "Hello, world!"
+		"linebyline":   linebyline,        // linebyline "foo\nbar" → ["foo", "bar"]
+		"lbl":          linebyline,        // linebyline "foo\nbar" → ["foo", "bar"]
 	}
+}
+
+func readfile(path string) (string, error) {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	return string(contents), nil
+}
+
+func linebyline(lines string) []string {
+	return strings.Split(lines, "\n")
+}
+
+func replace(old, new, src string) string {
+	return strings.Replace(src, old, new, -1)
+}
+
+func sha256sum(input string) string {
+	hash := sha256.Sum256([]byte(input))
+	return hex.EncodeToString(hash[:])
+}
+
+func sha1sum(input string) string {
+	hash := sha1.Sum([]byte(input))
+	return hex.EncodeToString(hash[:])
+}
+
+func base64encode(v string) string {
+	return base64.StdEncoding.EncodeToString([]byte(v))
+}
+
+func base64decode(v string) (string, error) {
+	data, err := base64.StdEncoding.DecodeString(v)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
+}
+
+func nospace(str string) string {
+	return strings.NewReplacer(" ", "").Replace(str)
+}
+
+func repeat(count int, str string) string {
+	return strings.Repeat(str, count)
 }
 
 func indent(spaces int, v string) string {
