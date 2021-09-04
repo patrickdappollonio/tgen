@@ -409,10 +409,16 @@ require github.com/spf13/cobra v1.2.1
 go 1.16
 ```
 
+```bash
+$ tgen -x '{{ readlocalfile "../etc/hosts" }}'
+Error: template: tgen:1:3: executing "tgen" at <readlocalfile "../etc/hosts">: error calling readlocalfile: unable to open local file "/etc/hosts": file is not under current working directory
+```
+
 Some considerations:
 
+* If a relative path is provided, all paths must be relative to the current working directory.
+  * If a template is inside a subfolder from the current working directory, the path you must provide in `readfile` has to be starting from the current working directory, not from the location where the template file is.
 * For `readfile`, the path can be eithe relative or absolute:
-  * Relative paths are relative to the current working directory. If a template is inside a subfolder from the current working directory, the path you must provide in `readfile` has to be starting from the current working directory, not from the location where the template file is.
   * Any file can be read through `readfile`, and yes, that includes `/etc/passwd` and other sensitive files. If this level of security is important to you, consider running `tgen` in trusted environments. This is by design to allow embedding files from other folders external to the current working directory and its subdirectories.
   * If reading any file is a problem, consider using `readlocalfile`.
 * For `readlocalfile`, the path can only be relative:
