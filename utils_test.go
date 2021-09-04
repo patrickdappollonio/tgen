@@ -81,7 +81,9 @@ MY_UPPER=abc`
 	f.WriteString(contents)
 	f.Close()
 
-	if err := loadVirtualEnv(f.Name()); err != nil {
+	loadedEnvVars, err := loadVirtualEnv(f.Name())
+
+	if err != nil {
 		t.Fatalf("not expecting an error loading virtualenv, got %s", err.Error())
 	}
 
@@ -103,12 +105,11 @@ MY_UPPER=abc`
 		t.Fatalf("expecting MY_UPPER to say \"abc\" but got %q", lower)
 	}
 
-	if err := loadVirtualEnv(""); err != nil {
+	if _, err := loadVirtualEnv(""); err != nil {
 		t.Fatalf("not expecting loadVirtualEnv to return an error when calling with empty, but got %s", err.Error())
 	}
 
-	err = loadVirtualEnv("/this/doesn't/exist")
-	if err == nil {
+	if _, err = loadVirtualEnv("/this/doesn't/exist"); err == nil {
 		t.Fatalf("expecting loadVirtualEnv to fail, but got no error")
 	}
 }
