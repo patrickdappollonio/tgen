@@ -26,7 +26,7 @@ Flags:
 
 As an important note, environment variables found in the environment have preference over the environment file. That way, the environment file can define `A=1` but then the application can be run with `A=2 tgen [flags]` so it overrides `A` to the value of `2`.
 
-## Example
+### Example
 
 Consider the following template, named `template.txt`:
 
@@ -56,7 +56,7 @@ The dog licked the Oil and everyone laughed.
 
 Do note as well that using single quotes for the template allows you to prevent any bash special parsing logic that your terminal might have.
 
-## Template Generation _a la Helm_
+### Template Generation _a la Helm_
 
 `tgen` can be used to generate templates, in a very similar way as `helm` can be used. However, do note that `tgen`'s intention is not to replace `helm` since it can't handle application lifecycle the way `helm` does, however, it can do a great job generating resources with very similar code.
 
@@ -125,13 +125,13 @@ tgen -f secret.yaml | kubectl apply -f -
 
 Do keep in mind though your DevOps requirements in terms of keeping a copy of your YAML files, rendered. Additionally, the `readfile` function is akin to `helm`'s `.Files`, with the exception that **you can read any file the `tgen` binary has access**, including potentially sensitive files such as `/etc/passwd`. If this is a concern, please run `tgen` in a CI/CD environment or where access to these resources is limited.
 
-## Template functions
+### Template functions
 
 All examples below have been generated using `-x` -- or `--execute`, which allows passing a template as argument rather than reading a file. In either case, whether the template file -- with `-f` or `--file` -- or the template argument is used, all functions are available.
 
 Each function includes a set of examples. The lines prepended with a `$` are bash commands you can try by running them on your terminal.
 
-### `raw`
+#### `raw`
 
 Raw returns the value provided as a string. It's kept for backwards compatibility and non-breaking old resources:
 
@@ -140,7 +140,7 @@ $ tgen -x '{{ "hello" | raw }}'
 hello
 ```
 
-### `lowercase`, `lower`
+#### `lowercase`, `lower`
 
 Converts the string to a lowercase value:
 
@@ -149,7 +149,7 @@ $ tgen -x '{{ "HELLO" | lowercase }}'
 hello
 ```
 
-### `uppercase`, `upper`
+#### `uppercase`, `upper`
 
 Converts the string to a uppercase value:
 
@@ -158,7 +158,7 @@ $ tgen -x '{{ "hello" | uppercase }}'
 HELLO
 ```
 
-### `title`
+#### `title`
 
 Converts the first letter of each word to uppercase:
 
@@ -167,7 +167,7 @@ $ tgen -x '{{ "hello world" | title }}'
 Hello World
 ```
 
-### `sprintf`, `printf`, `println`
+#### `sprintf`, `printf`, `println`
 
 Functions akin to Go's own `fmt.Sprintf` and `fmt.Sprintln`. `printf` is an alias of `sprintf`:
 
@@ -176,7 +176,7 @@ $ tgen -x '{{ sprintf "Hello, %s!" "World" }}'
 Hello, World!
 ```
 
-### `trim`, `trimPrefix`, `trimSuffix`
+#### `trim`, `trimPrefix`, `trimSuffix`
 
 Trim empty spaces, a prefix or a suffix:
 
@@ -195,7 +195,7 @@ $ tgen -x '{{ trimSuffix "hello" "o" }}'
 hell
 ```
 
-### `split`
+#### `split`
 
 Splits a string on a given character:
 
@@ -211,7 +211,7 @@ World
 
 ```
 
-### `base`, `dir`, `clean`, `ext`, `isAbs`
+#### `base`, `dir`, `clean`, `ext`, `isAbs`
 
 Functions to use when handling directories:
 
@@ -240,7 +240,7 @@ $ tgen -x '{{ isAbs "foo.zip" }}'
 false
 ```
 
-### `env`, `envdefault`
+#### `env`, `envdefault`
 
 Functions to grab environment variable values. For `env`, the value will be printed out or be empty if the environment variable is not set. For `envdefault`, the value will be the value retrieved from the environment variable or the default value specified.
 
@@ -266,7 +266,7 @@ $ tgen -x '{{ envdefault "SQL_HOST" "sql.example.com" }}'
 sql.example.com
 ```
 
-### `rndstring`
+#### `rndstring`
 
 Generates a random string of a given length:
 
@@ -275,7 +275,7 @@ $ tgen -x '{{ rndstring 8 }}'
 mHNmtrbf
 ```
 
-### `repeat`
+#### `repeat`
 
 Repeats a string a given amount of times:
 
@@ -284,7 +284,7 @@ $ tgen -x '{{ repeat 3 "abc" }}'
 abcabcabc
 ```
 
-### `nospace`
+#### `nospace`
 
 Removes all spaces from a string:
 
@@ -293,7 +293,7 @@ $ tgen -x '{{ nospace "Lorem ipsum dolor sit amet" }}'
 Loremipsumdolorsitamet
 ```
 
-### `quote`, `squote`
+#### `quote`, `squote`
 
 Wrap a string in single quotes -- with `squote` -- or double quotes -- with `quote`:
 
@@ -307,7 +307,7 @@ $ tgen -x '{{ squote "Hello" }}'
 'Hello'
 ```
 
-### `replace`
+#### `replace`
 
 Replaces a substring of a string. The first parameter is the old value, the second parameter is the new value, and the third parameter is the complete string you want to perform the replacement.
 
@@ -323,7 +323,7 @@ $ tgen -x '{{ raw "Hello, World!" | replace "World" "Patrick" }}'
 Hello, Patrick!
 ```
 
-### `indent`, `nindent`
+#### `indent`, `nindent`
 
 Adds spaces at the beginning of each line for indentation. `nindent` will also add a starting line break before the string. Both functions are especially useful when dealing with YAML files.
 
@@ -353,7 +353,7 @@ user_details:
     /home/patrick
 ```
 
-### `b64enc`, `base64encode`, `b64dec`, `base64decode`
+#### `b64enc`, `base64encode`, `b64dec`, `base64decode`
 
 Functions to encode and decode from `base64`.
 
@@ -377,7 +377,7 @@ $ tgen -x '{{ base64decode "aGVsbG8=" }}'
 hello
 ```
 
-### `sha1sum`, `sha256sum`
+#### `sha1sum`, `sha256sum`
 
 Generates a `SHA1` hash or a `SHA256` hash of a given string:
 
@@ -391,7 +391,7 @@ $ tgen -x '{{ sha256sum "hello" }}'
 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
 ```
 
-### `readfile`, `readlocalfile`
+#### `readfile`, `readlocalfile`
 
 Read a file from a local path -- either relative or absolute -- and print it as a string. Useful to embed files from your local machine or CI environment into your template:
 
@@ -428,7 +428,7 @@ Some considerations:
 
 For a more complete example, see [Template Generation _a la Helm_](#template-generation-a-la-helm).
 
-### `linebyline`, `lbl`
+#### `linebyline`, `lbl`
 
 Parses the input and splits on line breaks. `linebyline` is a shorcut for [`split`](#split) with a split character of `\n`. `lbl` is an alias of `linebyline`:
 
