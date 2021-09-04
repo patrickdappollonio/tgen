@@ -1,8 +1,7 @@
 name: Continuous Integration
 on:
   push:
-    branches:
-      - '!master'
+  pull_request:
 
 jobs:
   test-app:
