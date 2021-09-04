@@ -32,14 +32,16 @@ func loadFile(fp string) (*bytes.Buffer, error) {
 	return &buf, nil
 }
 
-func loadVirtualEnv(fp string) error {
+func loadVirtualEnv(fp string) (map[string]string, error) {
+	envVars := make(map[string]string)
+
 	if fp == "" {
-		return nil
+		return nil, nil
 	}
 
 	data, err := loadFile(fp)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	sc := bufio.NewScanner(data)
@@ -49,10 +51,10 @@ func loadVirtualEnv(fp string) error {
 			continue
 		}
 
-		loadedEnvVars[k] = v
+		envVars[k] = v
 	}
 
-	return nil
+	return envVars, nil
 }
 
 func parseLine(line string) (string, string) {
@@ -79,10 +81,10 @@ func getDelimiter(d string) (string, string, error) {
 	return d[:div], d[div:], nil
 }
 
-func executeTemplate(t *template.Template, tloc string, w io.Writer, b *bytes.Buffer) error {
-	tmpl, err := t.Parse(b.String())
+func executeTemplate(t *template.Template, templateLocation string, output io.Writer, envVars map[string]string, templateData *bytes.Buffer) error {
+	tmpl, err := t.Parse(templateData.String())
 	if err != nil {
-		return fmt.Errorf("unable to parse template file %q: %s", tloc, err.Error())
+		return fmt.Errorf("unable to parse template file %q: %s", templateLocation, err.Error())
 	}
 
 	var temp bytes.Buffer
@@ -97,9 +99,6 @@ func executeTemplate(t *template.Template, tloc string, w io.Writer, b *bytes.Bu
 		return err
 	}
 
-	if _, err := io.Copy(os.Stdout, &temp); err != nil {
-		return err
-	}
-
-	return nil
+	_, err = io.Copy(output, &temp)
+	return err
 }

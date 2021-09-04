@@ -5,7 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io/fs"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -15,50 +17,54 @@ import (
 	"unsafe"
 )
 
-func getTemplateFunctions(strict bool) template.FuncMap {
+func getTemplateFunctions(virtualKV map[string]string, strict bool) template.FuncMap {
 	return template.FuncMap{
 		"raw": func(s string) string {
 			return s
 		},
 
 		// Go built-ins
-		"lowercase":  strings.ToLower,    // "HELLO" → "hello"
-		"lower":      strings.ToLower,    // "HELLO" → "hello"
-		"uppercase":  strings.ToUpper,    // "hello" → "HELLO"
-		"upper":      strings.ToUpper,    // "hello" → "HELLO"
-		"title":      strings.Title,      // "hello" → "Hello"
-		"sprintf":    fmt.Sprintf,        // sprintf "Hello, %s" "world" → "Hello, world"
-		"printf":     fmt.Sprintf,        // printf "Hello, %s" "world" → "Hello, world"
-		"println":    fmt.Sprintln,       // println "Hello" "world!" → "Hello world!\n"
-		"trim":       strings.TrimSpace,  // trim "   hello   " → "hello"
-		"trimPrefix": strings.TrimPrefix, // trimPrefix "abcdef" "abc" → "def"
-		"trimSuffix": strings.TrimSuffix, // trimSuffix "abcdef" "def" → "abc"
-		"base":       filepath.Base,      // base "/foo/bar/baz" → "baz"
-		"dir":        filepath.Dir,       // dir "/foo/bar/baz" → "/foo/bar"
-		"clean":      filepath.Clean,     // clean "/foo/bar/../baz" → "/foo/baz"
-		"ext":        filepath.Ext,       // ext "/foo.zip" → ".zip"
-		"isAbs":      filepath.IsAbs,     // isAbs "foo.zip" → false
+		"lowercase":  strings.ToLower,
+		"lower":      strings.ToLower,
+		"uppercase":  strings.ToUpper,
+		"upper":      strings.ToUpper,
+		"title":      strings.Title,
+		"sprintf":    fmt.Sprintf,
+		"printf":     fmt.Sprintf,
+		"println":    fmt.Sprintln,
+		"trim":       strings.TrimSpace,
+		"trimPrefix": strings.TrimPrefix,
+		"trimSuffix": strings.TrimSuffix,
+		"split":      strings.Split,
+		"base":       filepath.Base,
+		"dir":        filepath.Dir,
+		"clean":      filepath.Clean,
+		"ext":        filepath.Ext,
+		"isAbs":      filepath.IsAbs,
+
+		// Environment functions
+		"env":        envstrict(virtualKV, strict),
+		"envdefault": envdefault(virtualKV),
 
 		// Locally defined functions
-		"env":          envstrict(strict), // env "user" → "patrick"
-		"envdefault":   envdefault,        // env "SQL_HOST" "sql.example.com" → "sql.example.com"
-		"rndstring":    rndgen,            // rndstring 8 → "lFEqUUOJ"
-		"repeat":       repeat,            // repeat 3 "abc" → "abcabcabc"
-		"nospace":      nospace,           // nospace "hello world!" → "helloworld!"
-		"quote":        quote,             // quote "hey" → `"hey"`
-		"squote":       squote,            // squote "hey" → "'hey'"
-		"indent":       indent,            // indent 3 "abc" → "  abc"
-		"nindent":      nindent,           // nindent 3 "abc" → "\n   abc"
-		"b64enc":       base64encode,      // b64enc "abc" → "YWJj"
-		"base64encode": base64encode,      // base64encode "abc" → "YWJj"
-		"b64dec":       base64decode,      // b64dec "YWJj" → "abc"
-		"base64decode": base64decode,      // base64decode "YWJj" → "abc"
-		"sha1sum":      sha1sum,           // sha1sum "abc" → "a9993e364706816aba3e25717850c26c9cd0d89d"
-		"sha256sum":    sha256sum,         // sha256sum "abc" → "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-		"replace":      replace,           // replace "World" "Patrick" "Hello, World!" → "Hello, Patrick!"
-		"readfile":     readfile,          // readfile "foobar.txt" → "Hello, world!"
-		"linebyline":   linebyline,        // linebyline "foo\nbar" → ["foo", "bar"]
-		"lbl":          linebyline,        // linebyline "foo\nbar" → ["foo", "bar"]
+		"rndstring":     rndgen,
+		"repeat":        repeat,
+		"nospace":       nospace,
+		"quote":         quote,
+		"squote":        squote,
+		"indent":        indent,
+		"nindent":       nindent,
+		"b64enc":        base64encode,
+		"base64encode":  base64encode,
+		"b64dec":        base64decode,
+		"base64decode":  base64decode,
+		"sha1sum":       sha1sum,
+		"sha256sum":     sha256sum,
+		"replace":       replace,
+		"readfile":      readfile,
+		"readlocalfile": readlocalfile,
+		"linebyline":    linebyline,
+		"lbl":           linebyline,
 	}
 }
 
@@ -69,6 +75,29 @@ func readfile(path string) (string, error) {
 	}
 
 	return string(contents), nil
+}
+
+func readlocalfile(path string) (string, error) {
+	if filepath.IsAbs(path) {
+		return "", fmt.Errorf("unable to open local file %q: path is absolute, only relative paths are allowed on \"readlocalfile\"", path)
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	cleanpath := filepath.Join(wd, path)
+
+	if cleanpath == wd {
+		return "", &fs.PathError{Op: "read", Path: cleanpath, Err: errors.New("is a directory")}
+	}
+
+	if !strings.HasPrefix(cleanpath, wd) {
+		return "", fmt.Errorf("unable to open local file %q: file is not under current working directory", cleanpath)
+	}
+
+	return readfile(cleanpath)
 }
 
 func linebyline(lines string) []string {
@@ -120,31 +149,33 @@ func nindent(spaces int, v string) string {
 	return "\n" + indent(spaces, v)
 }
 
-func envdefault(k, defval string) (string, error) {
-	if s, _ := envfunc(k, false); s != "" {
-		return s, nil
-	}
-
-	return defval, nil
-}
-
 func quote(s string) string  { return `"` + s + `"` }
 func squote(s string) string { return `'` + s + `'` }
 
-func envstrict(strict bool) func(s string) (string, error) {
+func envstrict(kv map[string]string, strict bool) func(s string) (string, error) {
 	return func(s string) (string, error) {
-		return envfunc(s, strict)
+		return envfunc(s, kv, strict)
 	}
 }
 
-func envfunc(k string, strictMode bool) (string, error) {
+func envdefault(kv map[string]string) func(k, defval string) (string, error) {
+	return func(k, defval string) (string, error) {
+		if s, _ := envfunc(k, kv, false); s != "" {
+			return s, nil
+		}
+
+		return defval, nil
+	}
+}
+
+func envfunc(k string, kv map[string]string, strictMode bool) (string, error) {
 	k = strings.ToUpper(k)
 
 	if v, found := os.LookupEnv(k); found {
 		return v, nil
 	}
 
-	if v, found := loadedEnvVars[k]; found {
+	if v, found := kv[k]; found {
 		return v, nil
 	}
 
@@ -157,8 +188,6 @@ func envfunc(k string, strictMode bool) (string, error) {
 
 // from: https://stackoverflow.com/a/31832326
 
-var src = rand.NewSource(time.Now().UnixNano())
-
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
 	letterIdxBits = 6                    // 6 bits to represent a letter index
@@ -167,6 +196,8 @@ const (
 )
 
 func rndgen(n int) string {
+	var src = rand.NewSource(time.Now().UnixNano())
+
 	b := make([]byte, n)
 	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
 	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
