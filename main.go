@@ -13,6 +13,12 @@ var (
 )
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	var configs conf
 
 	var root = &cobra.Command{
@@ -32,7 +38,5 @@ func main() {
 	root.Flags().BoolVarP(&configs.stdin, "stdin", "i", false, "a stdin input to execute directly, without providing --file or --execute")
 	root.Flags().BoolVarP(&configs.strictMode, "strict", "s", false, "enables strict mode: if an environment variable in the file is defined but not set, it'll fail")
 
-	if err := root.Execute(); err != nil {
-		os.Exit(1)
-	}
+	return root.Execute()
 }
