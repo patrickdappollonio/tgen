@@ -1,6 +1,7 @@
 # `tgen`
 
-[![Release](https://github.com/patrickdappollonio/tgen/actions/workflows/go-release.yml/badge.svg)](https://github.com/patrickdappollonio/tgen/releases)
+[![Tests passing](https://img.shields.io/github/workflow/status/patrickdappollonio/tgen/Continuous%20Integration/master?logo=github&style=flat-square)](https://github.com/patrickdappollonio/tgen/actions)
+[![Downloads](https://img.shields.io/github/downloads/patrickdappollonio/tgen/total?color=blue&logo=github&style=flat-square)](https://github.com/patrickdappollonio/tgen/releases)
 
 
 `tgen` is a simple CLI application that allows you to write a template file and then use the power of Go Templates to generate an output (which is) outputted to `stdout`. Besides the Go Template engine itself, `tgen` contains a few extra utility functions to assist you when writing templates. See below for a description of each.
