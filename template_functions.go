@@ -31,8 +31,10 @@ func getTemplateFunctions(virtualKV map[string]string, strict bool) template.Fun
 		// Go built-ins
 		"lowercase":  strings.ToLower,
 		"lower":      strings.ToLower,
+		"tolower":    strings.ToLower,
 		"uppercase":  strings.ToUpper,
 		"upper":      strings.ToUpper,
+		"toupper":    strings.ToUpper,
 		"title":      cases.Title,
 		"sprintf":    fmt.Sprintf,
 		"printf":     fmt.Sprintf,
@@ -75,6 +77,9 @@ func getTemplateFunctions(virtualKV map[string]string, strict bool) template.Fun
 		"slice":         slice,
 		"after":         after,
 		"skip":          after,
+		"shuffle":       shuffle,
+		"first":         first,
+		"last":          last,
 	}
 }
 
@@ -324,6 +329,90 @@ func after(index any, seq any) (any, error) {
 	}
 
 	return seqv.Slice(indexv, seqv.Len()).Interface(), nil
+}
+
+func shuffle(seq any) (any, error) {
+	if seq == nil {
+		return nil, errors.New("seq must be provided")
+	}
+
+	seqv := reflect.ValueOf(seq)
+	seqv, isNil := indirectValue(seqv)
+	if isNil {
+		return nil, errors.New("can't iterate over a nil value")
+	}
+
+	if seqv.Len() == 0 {
+		return nil, errors.New("can't shuffle an empty sequence")
+	}
+
+	switch seqv.Kind() {
+	case reflect.Array, reflect.Slice, reflect.String:
+		// skip
+	default:
+		return nil, errors.New("can't iterate over " + reflect.ValueOf(seq).Type().String())
+	}
+
+	shuffled := reflect.MakeSlice(reflect.TypeOf(seq), seqv.Len(), seqv.Len())
+
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomIndices := rnd.Perm(seqv.Len())
+
+	for index, value := range randomIndices {
+		shuffled.Index(value).Set(seqv.Index(index))
+	}
+
+	return shuffled.Interface(), nil
+}
+
+func first(seq any) (any, error) {
+	if seq == nil {
+		return nil, errors.New("seq must be provided")
+	}
+
+	seqv := reflect.ValueOf(seq)
+	seqv, isNil := indirectValue(seqv)
+	if isNil {
+		return nil, errors.New("can't iterate over a nil value")
+	}
+
+	switch seqv.Kind() {
+	case reflect.Array, reflect.Slice, reflect.String:
+		// okay
+	default:
+		return nil, errors.New("can't iterate over " + reflect.ValueOf(seq).Type().String())
+	}
+
+	if seqv.Len() == 0 {
+		return nil, errors.New("can't get first item of an empty sequence")
+	}
+
+	return seqv.Index(0).Interface(), nil
+}
+
+func last(seq any) (any, error) {
+	if seq == nil {
+		return nil, errors.New("seq must be provided")
+	}
+
+	seqv := reflect.ValueOf(seq)
+	seqv, isNil := indirectValue(seqv)
+	if isNil {
+		return nil, errors.New("can't iterate over a nil value")
+	}
+
+	switch seqv.Kind() {
+	case reflect.Array, reflect.Slice, reflect.String:
+		// okay
+	default:
+		return nil, errors.New("can't iterate over " + reflect.ValueOf(seq).Type().String())
+	}
+
+	if seqv.Len() == 0 {
+		return nil, errors.New("can't get last item of an empty sequence")
+	}
+
+	return seqv.Index(seqv.Len() - 1).Interface(), nil
 }
 
 func toInt(v interface{}) (int, bool) {
