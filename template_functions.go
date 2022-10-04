@@ -31,8 +31,10 @@ func getTemplateFunctions(virtualKV map[string]string, strict bool) template.Fun
 		// Go built-ins
 		"lowercase":  strings.ToLower,
 		"lower":      strings.ToLower,
+		"tolower":    strings.ToLower,
 		"uppercase":  strings.ToUpper,
 		"upper":      strings.ToUpper,
+		"toupper":    strings.ToUpper,
 		"title":      cases.Title,
 		"sprintf":    fmt.Sprintf,
 		"printf":     fmt.Sprintf,
