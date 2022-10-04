@@ -164,3 +164,123 @@ func Test_after(t *testing.T) {
 		})
 	}
 }
+
+func Test_shuffle(t *testing.T) {
+	tests := []struct {
+		name    string
+		seq     any
+		wantErr bool
+	}{
+		{
+			name: "shuffle 1 2 3",
+			seq:  []int{1, 2, 3},
+		},
+		{
+			name:    "nil",
+			seq:     nil,
+			wantErr: true,
+		},
+		{
+			name:    "empty",
+			seq:     []int{},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := shuffle(tt.seq)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("shuffle() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			var l1, l2 int
+
+			if got != nil {
+				l1 = reflect.ValueOf(got).Len()
+			}
+
+			if tt.seq != nil {
+				l2 = reflect.ValueOf(tt.seq).Len()
+			}
+
+			if !tt.wantErr && l1 != l2 {
+				t.Errorf("shuffle() got length = %d (original: %d)", l1, l2)
+			}
+		})
+	}
+}
+
+func Test_first(t *testing.T) {
+	tests := []struct {
+		name    string
+		seq     any
+		want    any
+		wantErr bool
+	}{
+		{
+			name: "first 1 2 3",
+			seq:  []int{1, 2, 3},
+			want: 1,
+		},
+		{
+			name:    "nil",
+			seq:     nil,
+			wantErr: true,
+		},
+		{
+			name:    "empty",
+			seq:     []int{},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := first(tt.seq)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("first() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("first() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_last(t *testing.T) {
+	tests := []struct {
+		name    string
+		seq     any
+		want    any
+		wantErr bool
+	}{
+		{
+			name: "last 1 2 3",
+			seq:  []int{1, 2, 3},
+			want: 3,
+		},
+		{
+			name:    "nil",
+			seq:     nil,
+			wantErr: true,
+		},
+		{
+			name:    "empty",
+			seq:     []int{},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := last(tt.seq)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("last() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("last() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
