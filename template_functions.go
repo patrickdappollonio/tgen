@@ -5,12 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -70,6 +73,8 @@ func getTemplateFunctions(virtualKV map[string]string, strict bool) template.Fun
 		"seq":           seq,
 		"list":          slice,
 		"slice":         slice,
+		"after":         after,
+		"skip":          after,
 	}
 }
 
@@ -283,4 +288,148 @@ func seq(values ...int) ([]int, error) {
 
 func slice(values ...interface{}) []interface{} {
 	return values
+}
+
+// after slices an array to only the items after the Nth item.
+func after(index any, seq any) (any, error) {
+	if index == nil || seq == nil {
+		return nil, errors.New("both limit and seq must be provided")
+	}
+
+	indexv, err := tointE(index)
+	if err != nil {
+		return nil, err
+	}
+
+	if indexv < 0 {
+		s := fmt.Sprintf("%d", indexv)
+		return nil, errors.New("sequence bounds out of range [" + s + ":]")
+	}
+
+	seqv := reflect.ValueOf(seq)
+	seqv, isNil := indirectValue(seqv)
+	if isNil {
+		return nil, errors.New("can't iterate over a nil value")
+	}
+
+	switch seqv.Kind() {
+	case reflect.Array, reflect.Slice, reflect.String:
+		// okay
+	default:
+		return nil, errors.New("can't iterate over " + reflect.ValueOf(seq).Type().String())
+	}
+
+	if indexv >= seqv.Len() {
+		return seqv.Slice(0, 0).Interface(), nil
+	}
+
+	return seqv.Slice(indexv, seqv.Len()).Interface(), nil
+}
+
+func toInt(v interface{}) (int, bool) {
+	switch v := v.(type) {
+	case int:
+		return v, true
+	case time.Weekday:
+		return int(v), true
+	case time.Month:
+		return int(v), true
+	default:
+		return 0, false
+	}
+}
+
+func trimZeroDecimal(s string) string {
+	var foundZero bool
+	for i := len(s); i > 0; i-- {
+		switch s[i-1] {
+		case '.':
+			if foundZero {
+				return s[:i-1]
+			}
+		case '0':
+			foundZero = true
+		default:
+			return s
+		}
+	}
+	return s
+}
+
+func indirect(a interface{}) interface{} {
+	if a == nil {
+		return nil
+	}
+	if t := reflect.TypeOf(a); t.Kind() != reflect.Ptr {
+		return a
+	}
+	v := reflect.ValueOf(a)
+	for v.Kind() == reflect.Ptr && !v.IsNil() {
+		v = v.Elem()
+	}
+	return v.Interface()
+}
+
+// indirect is borrowed from the Go stdlib: 'text/template/exec.go'
+func indirectValue(v reflect.Value) (rv reflect.Value, isNil bool) {
+	for ; v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface; v = v.Elem() {
+		if v.IsNil() {
+			return v, true
+		}
+		if v.Kind() == reflect.Interface && v.NumMethod() > 0 {
+			break
+		}
+	}
+	return v, false
+}
+
+func tointE(i interface{}) (int, error) {
+	i = indirect(i)
+
+	intv, ok := toInt(i)
+	if ok {
+		return intv, nil
+	}
+
+	switch s := i.(type) {
+	case int64:
+		return int(s), nil
+	case int32:
+		return int(s), nil
+	case int16:
+		return int(s), nil
+	case int8:
+		return int(s), nil
+	case uint:
+		return int(s), nil
+	case uint64:
+		return int(s), nil
+	case uint32:
+		return int(s), nil
+	case uint16:
+		return int(s), nil
+	case uint8:
+		return int(s), nil
+	case float64:
+		return int(s), nil
+	case float32:
+		return int(s), nil
+	case string:
+		v, err := strconv.ParseInt(trimZeroDecimal(s), 0, 0)
+		if err == nil {
+			return int(v), nil
+		}
+		return 0, fmt.Errorf("unable to cast %#v of type %T to int64", i, i)
+	case json.Number:
+		return tointE(string(s))
+	case bool:
+		if s {
+			return 1, nil
+		}
+		return 0, nil
+	case nil:
+		return 0, nil
+	default:
+		return 0, fmt.Errorf("unable to cast %#v of type %T to int", i, i)
+	}
 }

@@ -22,6 +22,7 @@
   - [`linebyline`, `lbl`](#linebyline-lbl)
   - [`seq`](#seq)
   - [`slice`, `list`](#slice-list)
+  - [`after`, `skip`](#after-skip)
 
 All examples below have been generated using `-x` -- or `--execute`, which allows passing a template as argument rather than reading a file. In either case, whether the template file -- with `-f` or `--file` -- or the template argument is used, all functions are available.
 
@@ -375,4 +376,19 @@ $ tgen -x '{{ slice 1 2 3 }}'
 
 $ tgen -x '{{ slice 1 2 3 "a" "b" "c" }}'
 [1 2 3 a b c]
+```
+
+## `after`, `skip`
+
+Returns a Go slice to only the items after the `n`th item. Negative numbers for `after` are not supported and will result in an error.
+
+```bash
+# Creates a sequence from 1 to 5, then
+# returns all values after 2
+$ tgen -x '{{ after 2 (seq 5) }}'
+[3 4 5]
+
+# Alternate way of writing it
+$ tgen -x '{{ seq 5 | after 2 }}'
+[3 4 5]
 ```
