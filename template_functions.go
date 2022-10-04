@@ -15,6 +15,8 @@ import (
 	"text/template"
 	"time"
 	"unsafe"
+
+	"golang.org/x/text/cases"
 )
 
 func getTemplateFunctions(virtualKV map[string]string, strict bool) template.FuncMap {
@@ -28,7 +30,7 @@ func getTemplateFunctions(virtualKV map[string]string, strict bool) template.Fun
 		"lower":      strings.ToLower,
 		"uppercase":  strings.ToUpper,
 		"upper":      strings.ToUpper,
-		"title":      strings.Title,
+		"title":      cases.Title,
 		"sprintf":    fmt.Sprintf,
 		"printf":     fmt.Sprintf,
 		"println":    fmt.Sprintln,
@@ -65,6 +67,9 @@ func getTemplateFunctions(virtualKV map[string]string, strict bool) template.Fun
 		"readlocalfile": readlocalfile,
 		"linebyline":    linebyline,
 		"lbl":           linebyline,
+		"seq":           seq,
+		"list":          slice,
+		"slice":         slice,
 	}
 }
 
@@ -213,4 +218,69 @@ func rndgen(n int) string {
 	}
 
 	return *(*string)(unsafe.Pointer(&b))
+}
+
+func seq(values ...int) ([]int, error) {
+	var start, step, end int
+
+	switch len(values) {
+	case 1:
+		start = 1
+		step = 1
+		end = values[0]
+
+	case 2:
+		start = values[0]
+		step = 1
+		end = values[1]
+
+	case 3:
+		start = values[0]
+		step = values[1]
+		end = values[2]
+
+	default:
+		return nil, fmt.Errorf("seq: incorrect number of arguments: %d", len(values))
+	}
+
+	if step == 0 {
+		return nil, fmt.Errorf("seq: step cannot be zero")
+	}
+
+	if start < end && step < 0 {
+		return nil, fmt.Errorf("seq: increment must be > 0 since %d < %d", start, end)
+	}
+	if start > end && step > 0 {
+		return nil, fmt.Errorf("seq: increment must be > 0 since %d > %d", start, end)
+	}
+
+	size := 0
+	posstep := step
+	if step < 0 {
+		posstep = -step
+	}
+
+	if end >= start {
+		size = (((end - start) / posstep) + 1)
+	} else {
+		size = (((start - end) / posstep) + 1)
+
+	}
+
+	result := make([]int, int(size))
+	value := start
+	for i := 0; ; i++ {
+		result[i] = value
+		value += step
+
+		if (step < 0 && value < end) || (step > 0 && value > end) {
+			break
+		}
+	}
+
+	return result, nil
+}
+
+func slice(values ...interface{}) []interface{} {
+	return values
 }
