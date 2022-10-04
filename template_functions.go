@@ -75,6 +75,9 @@ func getTemplateFunctions(virtualKV map[string]string, strict bool) template.Fun
 		"slice":         slice,
 		"after":         after,
 		"skip":          after,
+		"shuffle":       shuffle,
+		"first":         first,
+		"last":          last,
 	}
 }
 
