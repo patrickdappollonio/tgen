@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -72,7 +71,7 @@ func TestLoadVirtualEnv(t *testing.T) {
 my_const_user=demo
 MY_UPPER=abc`
 
-	f, err := ioutil.TempFile(os.TempDir(), "testing_")
+	f, err := os.CreateTemp(os.TempDir(), "testing_")
 	if err != nil {
 		t.Fatalf("not expecting an error creating temp file, got %s", err.Error())
 	}
