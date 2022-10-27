@@ -1,104 +1,58 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
+	"encoding/gob"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
 	"strings"
-	"text/template"
 )
 
-func loadFile(fp string) (*bytes.Buffer, error) {
-	tmplfile, err := filepath.Abs(fp)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get path to file %q: %s", fp, err.Error())
+func parseEnvLine(line string) (string, string, error) {
+	line = strings.TrimSpace(line)
+
+	if line == "" {
+		return "", "", nil
 	}
 
-	f, err := os.Open(tmplfile)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open file %q: %s", fp, err.Error())
+	if strings.HasPrefix(line, "#") {
+		return "", "", nil
 	}
 
-	defer f.Close()
-
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, f); err != nil {
-		return nil, fmt.Errorf("unable to read file %q: %s", fp, err.Error())
+	key, value, found := strings.Cut(line, "=")
+	if !found {
+		return "", "", fmt.Errorf("invalid environment line: key=value separator not found: %q", line)
 	}
 
-	return &buf, nil
+	key = strings.ToUpper(strings.TrimSpace(key))
+
+	if key == "" {
+		return "", "", fmt.Errorf("key empty for environment line: %q", line)
+	}
+
+	value = strings.TrimSpace(value)
+
+	if strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"") {
+		value = strings.TrimPrefix(value, "\"")
+		value = strings.TrimSuffix(value, "\"")
+	}
+
+	return key, value, nil
 }
 
-func loadVirtualEnv(fp string) (map[string]string, error) {
-	envVars := make(map[string]string)
+func copyMap(m map[string]any) (map[string]any, error) {
+	gob.Register(map[string]any{})
 
-	if fp == "" {
-		return nil, nil
-	}
-
-	data, err := loadFile(fp)
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	dec := gob.NewDecoder(&buf)
+	err := enc.Encode(m)
 	if err != nil {
 		return nil, err
 	}
-
-	sc := bufio.NewScanner(data)
-	for sc.Scan() {
-		k, v := parseLine(sc.Text())
-		if k == "" || v == "" {
-			continue
-		}
-
-		envVars[k] = v
-	}
-
-	return envVars, nil
-}
-
-func parseLine(line string) (string, string) {
-	if strings.HasPrefix(strings.TrimSpace(line), "#") {
-		return "", ""
-	}
-
-	items := strings.Split(line, "=")
-	if len(items) < 2 {
-		return "", ""
-	}
-
-	return strings.ToUpper(items[0]), strings.Join(items[1:], "=")
-}
-
-func getDelimiter(d string) (string, string, error) {
-	size := len(d)
-
-	if size < 2 || size%2 != 0 {
-		return "", "", fmt.Errorf("delimiter size needs to be multiple of two and have 2 or more characters")
-	}
-
-	div := size / 2
-	return d[:div], d[div:], nil
-}
-
-func executeTemplate(t *template.Template, templateLocation string, output io.Writer, envVars map[string]string, templateData *bytes.Buffer) error {
-	tmpl, err := t.Parse(templateData.String())
+	var copy map[string]any
+	err = dec.Decode(&copy)
 	if err != nil {
-		return fmt.Errorf("unable to parse template file %q: %s", templateLocation, err.Error())
+		return nil, err
 	}
-
-	var temp bytes.Buffer
-
-	if err := tmpl.Execute(&temp, nil); err != nil {
-		if _, ok := err.(template.ExecError); ok {
-			if strings.Contains(err.Error(), "environment variable not found") {
-				return &enotfounderr{name: err.Error()[strings.LastIndex(err.Error(), ": $")+3:]}
-			}
-		}
-
-		return err
-	}
-
-	_, err = io.Copy(output, &temp)
-	return err
+	return copy, nil
 }
