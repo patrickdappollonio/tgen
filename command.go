@@ -1,81 +1,59 @@
 package main
 
 import (
-	"bytes"
-	"errors"
 	"io"
 	"os"
-	"text/template"
 )
 
 func command(w io.Writer, c conf) error {
-	var b *bytes.Buffer
+	// You can't pass "--file" and "--execute" together
+	if c.templateFilePath != "" && c.stdinTemplateFile != "" {
+		return &conflictingArgsError{"file", "execute"}
+	}
 
-	if c.templateFile != "" {
-		if c.rawTemplate != "" {
-			return &conflictingArgsError{"file", "raw"}
+	tg := &tgen{Strict: c.strictMode}
+
+	// Read template from "-x" or "--execute" flag
+	if c.stdinTemplateFile != "" {
+		tg.setTemplate("-", c.stdinTemplateFile)
+	}
+
+	// Read template file (either from "--file" or stdin)
+	if pathToOpen := c.templateFilePath; pathToOpen != "" {
+		var err error
+		switch pathToOpen {
+		case "-":
+			err = tg.loadTemplateFile("", os.Stdin)
+		default:
+			err = tg.loadTemplatePath(pathToOpen)
 		}
 
-		if c.stdin {
-			return &conflictingArgsError{"file", "stdin"}
-		}
-
-		bt, err := loadFile(c.templateFile)
 		if err != nil {
 			return err
 		}
-
-		b = bt
 	}
 
-	if c.rawTemplate != "" {
-		if c.templateFile != "" {
-			return &conflictingArgsError{"raw", "file"}
-		}
-
-		if c.stdin {
-			return &conflictingArgsError{"raw", "stdin"}
-		}
-
-		b = bytes.NewBufferString(c.rawTemplate)
-	}
-
-	if c.stdin {
-		if c.templateFile != "" {
-			return &conflictingArgsError{"stdin", "file"}
-		}
-
-		if c.rawTemplate != "" {
-			return &conflictingArgsError{"stdin", "raw"}
-		}
-
-		bt, err := loadFile(os.Stdin.Name())
-		if err != nil {
-			return err
-		}
-
-		b = bt
-	}
-
-	if b == nil {
-		return errors.New("needs to specify either a template file (using --file) or a raw template (using --raw or --stdin)")
-	}
-
-	envVars, err := loadVirtualEnv(c.environmentFile)
-	if err != nil {
-		return err
-	}
-
-	c.t = template.New(appName).Funcs(getTemplateFunctions(envVars, c.strictMode))
-
+	// Set delimiters
 	if c.customDelimiters != "" {
-		l, r, err := getDelimiter(c.customDelimiters)
-		if err != nil {
+		if err := tg.setDelimiters(c.customDelimiters); err != nil {
 			return err
 		}
-
-		c.t = c.t.Delims(l, r)
 	}
 
-	return executeTemplate(c.t, c.templateFile, w, envVars, b)
+	// Load environment variable file
+	if c.environmentFile != "" {
+		if err := tg.loadEnvValues(c.environmentFile); err != nil {
+			return err
+		}
+	}
+
+	// Load yaml values file
+	if c.valuesFile != "" {
+		if err := tg.loadYAMLValues(c.valuesFile); err != nil {
+			return err
+		}
+	}
+
+	// Render code
+	return tg.render(w)
 }

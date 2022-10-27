@@ -1,4 +1,4 @@
-# `tgen`
+# `tgen`: a tiny template tool
 
 [![Tests passing](https://img.shields.io/github/workflow/status/patrickdappollonio/tgen/Continuous%20Integration/master?logo=github&style=flat-square)](https://github.com/patrickdappollonio/tgen/actions)
 [![Downloads](https://img.shields.io/github/downloads/patrickdappollonio/tgen/total?color=blue&logo=github&style=flat-square)](https://github.com/patrickdappollonio/tgen/releases)
@@ -15,22 +15,24 @@ Usage:
   tgen [flags]
 
 Flags:
-  -d, --delimiter string     delimiter (default "{{}}")
   -e, --environment string   an optional environment file to use (key=value formatted) to perform replacements
+  -f, --file string          the template file to process
+  -d, --delimiter string     template delimiter (default "{{}}")
   -x, --execute string       a raw template to execute directly, without providing --file
-  -f, --file string          the template file to process (required)
+  -v, --values string        a file containing values to use for the template, a la Helm
+      --with-values          automatically include a values.yaml file from the current working directory
+  -s, --strict               strict mode: if an environment variable or value is used in the template but not set, it fails rendering
   -h, --help                 help for tgen
-  -s, --strict               enables strict mode: if an environment variable in the file is defined but not set, it'll fail
       --version              version for tgen
 ```
 
 ### Environment file
 
-`tgen` supports an optional environment variable collection in a file but it's a pretty basic implementation of a simple key/value pair. The environment file works by finding lines that aren't empty or preceded by a pound `#` -- since they're treated as comments -- and then tries to find at least one equal (`=`) sign. If it can find at least one, all values on the left side of the equal sign become the key -- which is also uppercased so it's compatible with the `env` function defined above -- and the contents on the right side become the value. If the same line has more than one equal, only the first one is honored and all remaining ones become part of the value.
+`tgen` supports an optional environment variable collection in a file but it's a pretty basic implementation of a simple key/value pair. The environment file works by finding lines that aren't empty or preceded by a pound `#` -- since they're treated as comments -- and then tries to find at least one equal (`=`) sign. If it can find at least one, all values on the left side of the equal sign become the key and the contents on the right side become the value. If the same line has more than one equal, only the first one is honored and all remaining ones become part of the value.
 
-As an important note, environment variables found in the environment have preference over the environment file. That way, the environment file can define `A=1` but then the application can be run with `A=2 tgen [flags]` so it overrides `A` to the value of `2`.
+There's no support for Bash interpolation or multiline values. If this is needed, consider using a YAML values file instead.
 
-### Example
+#### Example
 
 Consider the following template, named `template.txt`:
 
@@ -44,14 +46,14 @@ And the following environment file, named `contents.env`:
 element=Oil
 ```
 
-After being passed to `tgen` by executing `tgen -e contents.env -f template.txt`, the output becomes:
+After being passed to `tgen`, the output becomes:
 
 ```bash
 $ tgen -e contents.env -f template.txt
 The dog licked the Oil and everyone laughed.
 ```
 
-Using the inline mode to execute a template, you can also call `tgen -x '{{ env "element" }}' -e contents.env` (note the use of single-quotes since in Go, strings are always double-quoted) which will yield the same result:
+Using the inline mode to execute a template, you can also call the program as such (note the use of single-quotes since in Go, strings are always double-quoted) which will yield the same result:
 
 ```bash
 $ tgen -x '{{ env "element" }}' -e contents.env
@@ -60,7 +62,7 @@ The dog licked the Oil and everyone laughed.
 
 Do note as well that using single quotes for the template allows you to prevent any bash special parsing logic that your terminal might have.
 
-### Template Generation _a la Helm_
+### Helm-style values
 
 `tgen` can be used to generate templates, in a very similar way as `helm` can be used. However, do note that `tgen`'s intention is not to replace `helm` since it can't handle application lifecycle the way `helm` does, however, it can do a great job generating resources with very similar code.
 
@@ -118,7 +120,7 @@ metadata:
 type: kubernetes.io/tls
 data:
   tls.crt: |
-    TmV2ZXIgZ29ubmEgZ2l2ZSB5b3UgdXAsIG5ldmVyIGdvbm5hIGxldCB5b3UgZG93bgpOZXZlciBnb25uYSBydW4gYXJvdW5kIGFuZCBkZXNlcnQgeW91Ck5ldmVyIGdvbm5hIG1ha2UgeW91IGNyeSwgbmV2ZXIgZ29ubmEgc2F5IGdvb2RieWUKTmV2ZXIgZ29ubmEgdGVsbCBhIGxpZSBhbmQgaHVydCB5b3UK
+    Rk9PQkFSQkFaCg==
 ```
 
 This output can be then passed to Kubernetes as follows:
@@ -128,6 +130,27 @@ tgen -f secret.yaml | kubectl apply -f -
 ```
 
 Do keep in mind though your DevOps requirements in terms of keeping a copy of your YAML files, rendered. Additionally, the `readfile` function is akin to `helm`'s `.Files`, with the exception that **you can read any file the `tgen` binary has access**, including potentially sensitive files such as `/etc/passwd`. If this is a concern, please run `tgen` in a CI/CD environment or where access to these resources is limited.
+
+You can also use a `values.yaml` file like Helm. `tgen` will allow you to read values from the values file as `.variable` or `.Values.variable`. The latter is the same as Helm's `.Values.variable` and the former is a shortcut to `.Values.variable` for convenience. Consider the following YAML values file:
+
+```yaml
+name: Patrick
+```
+
+And the following template:
+
+```yaml
+Hello, my name is {{ .name }}.
+```
+
+Running `tgen` with the values file will yield the following output:
+
+```bash
+$ tgen -f template.yaml -v values.yaml
+Hello, my name is Patrick.
+```
+
+If your values file is called `values.yaml`, you also have the handy shortcut of simply specifying `--with-values` and `tgen` will automatically include the values file from the current working directory.
 
 ### Template functions
 

@@ -1,114 +1,96 @@
 package main
 
-import (
-	"os"
-	"testing"
-)
+import "testing"
 
-func TestDelimiter(t *testing.T) {
-	cases := []struct {
-		sent  string
-		left  string
-		right string
-		fails bool
+func Test_parseEnvLine(t *testing.T) {
+	tests := []struct {
+		name      string
+		line      string
+		wantKey   string
+		wantValue string
+		wantErr   bool
 	}{
-		{"<<>>", "<<", ">>", false},
-		{"{{}}", "{{", "}}", false},
-		{"{}", "{", "}", false},
-		{"ab", "a", "b", false},
-		{"abc", "", "", true},
+		{
+			name:      "empty",
+			line:      "",
+			wantKey:   "",
+			wantValue: "",
+		},
+		{
+			name:      "comment",
+			line:      "# comment",
+			wantKey:   "",
+			wantValue: "",
+		},
+		{
+			name:      "comment with space",
+			line:      " # comment",
+			wantKey:   "",
+			wantValue: "",
+		},
+		{
+			name:      "key lowercase and value",
+			line:      "key=value",
+			wantKey:   "KEY",
+			wantValue: "value",
+		},
+		{
+			name:      "key uppercase and value",
+			line:      "KEY=value",
+			wantKey:   "KEY",
+			wantValue: "value",
+		},
+		{
+			name:      "multi-equals",
+			line:      "KEY=value=1",
+			wantKey:   "KEY",
+			wantValue: "value=1",
+		},
+		{
+			name:    "no key",
+			line:    "=value1",
+			wantErr: true,
+		},
+		{
+			name:    "no separator",
+			line:    "KEYvalue1",
+			wantErr: true,
+		},
+		{
+			name:      "no value",
+			line:      "KEY=",
+			wantKey:   "KEY",
+			wantValue: "",
+		},
+		{
+			name:      "no value with space",
+			line:      "KEY= ",
+			wantKey:   "KEY",
+			wantValue: "",
+		},
+		{
+			name:      "quoted value",
+			line:      "KEY=\"value1\"",
+			wantKey:   "KEY",
+			wantValue: "value1",
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotKey, gotValue, err := parseEnvLine(tt.line)
 
-	for _, v := range cases {
-		t.Run(v.sent, func(tt *testing.T) {
-			l, r, err := getDelimiter(v.sent)
-
-			if v.fails && err == nil {
-				tt.Fatalf("expecting function to fail, but got no error")
-			} else if !v.fails && err != nil {
-				tt.Fatalf("not expecting to fail, but got %q", err.Error())
+			if (err != nil) != tt.wantErr {
+				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 
-			if v.left != l {
-				tt.Fatalf("expecting left side to be %q, got %q", v.left, l)
+			if gotKey != tt.wantKey {
+				t.Errorf("got key = %q, want %q", gotKey, tt.wantKey)
 			}
 
-			if v.right != r {
-				tt.Fatalf("expecting right side to be %q, got %q", v.right, r)
+			if gotValue != tt.wantValue {
+				t.Errorf("got value = %q, want %q", gotValue, tt.wantValue)
 			}
 		})
-	}
-}
-
-func TestParseLine(t *testing.T) {
-	cases := []struct {
-		sent  string
-		left  string
-		right string
-	}{
-		{"a=b", "A", "b"},
-		{"c", "", ""},
-		{"c=", "C", ""},
-	}
-
-	for _, v := range cases {
-		t.Run(v.sent, func(tt *testing.T) {
-			l, r := parseLine(v.sent)
-
-			if v.left != l {
-				tt.Fatalf("expecting left side to be %q, got %q", v.left, l)
-			}
-
-			if v.right != r {
-				tt.Fatalf("expecting right side to be %q, got %q", v.right, r)
-			}
-		})
-	}
-}
-
-func TestLoadVirtualEnv(t *testing.T) {
-	contents := `# This is a comment
-my_const_user=demo
-MY_UPPER=abc`
-
-	f, err := os.CreateTemp(os.TempDir(), "testing_")
-	if err != nil {
-		t.Fatalf("not expecting an error creating temp file, got %s", err.Error())
-	}
-	defer os.Remove(f.Name())
-
-	f.WriteString(contents)
-	f.Close()
-
-	loadedEnvVars, err := loadVirtualEnv(f.Name())
-
-	if err != nil {
-		t.Fatalf("not expecting an error loading virtualenv, got %s", err.Error())
-	}
-
-	upper, found := loadedEnvVars["MY_CONST_USER"]
-	if !found {
-		t.Fatalf("expecting to find key MY_CONST_USER, but wasn't found in virtualenv")
-	}
-
-	if upper != "demo" {
-		t.Fatalf("expecting MY_CONST_USER to say \"demo\" but got %q", upper)
-	}
-
-	lower, found := loadedEnvVars["MY_UPPER"]
-	if !found {
-		t.Fatalf("expecting to find key MY_UPPER, but wasn't found in virtualenv")
-	}
-
-	if lower != "abc" {
-		t.Fatalf("expecting MY_UPPER to say \"abc\" but got %q", lower)
-	}
-
-	if _, err := loadVirtualEnv(""); err != nil {
-		t.Fatalf("not expecting loadVirtualEnv to return an error when calling with empty, but got %s", err.Error())
-	}
-
-	if _, err = loadVirtualEnv("/this/doesn't/exist"); err == nil {
-		t.Fatalf("expecting loadVirtualEnv to fail, but got no error")
 	}
 }

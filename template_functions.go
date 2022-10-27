@@ -24,9 +24,7 @@ import (
 
 func getTemplateFunctions(virtualKV map[string]string, strict bool) template.FuncMap {
 	return template.FuncMap{
-		"raw": func(s string) string {
-			return s
-		},
+		"raw": raw,
 
 		// Go built-ins
 		"lowercase":  strings.ToLower,
@@ -81,6 +79,10 @@ func getTemplateFunctions(virtualKV map[string]string, strict bool) template.Fun
 		"first":         first,
 		"last":          last,
 	}
+}
+
+func raw(s string) string {
+	return s
 }
 
 func readfile(path string) (string, error) {
