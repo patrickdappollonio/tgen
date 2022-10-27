@@ -36,7 +36,7 @@ There's no support for Bash interpolation or multiline values. If this is needed
 
 Consider the following template, named `template.txt`:
 
-```go
+```handlebars
 The dog licked the {{ env "element" }} and everyone laughed.
 ```
 
@@ -139,7 +139,7 @@ name: Patrick
 
 And the following template:
 
-```yaml
+```handlebars
 Hello, my name is {{ .name }}.
 ```
 
