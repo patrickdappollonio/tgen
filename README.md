@@ -1,6 +1,5 @@
 # `tgen`: a tiny template tool
 
-[![Tests passing](https://img.shields.io/github/workflow/status/patrickdappollonio/tgen/Continuous%20Integration/master?logo=github&style=flat-square)](https://github.com/patrickdappollonio/tgen/actions)
 [![Downloads](https://img.shields.io/github/downloads/patrickdappollonio/tgen/total?color=blue&logo=github&style=flat-square)](https://github.com/patrickdappollonio/tgen/releases)
 
 
