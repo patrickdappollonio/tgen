@@ -2,7 +2,7 @@ module github.com/patrickdappollonio/tgen
 
 require (
 	github.com/spf13/cobra v1.6.1
-	golang.org/x/text v0.4.0
+	golang.org/x/text v0.8.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
