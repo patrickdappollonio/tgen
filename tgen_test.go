@@ -248,11 +248,7 @@ func Test_tgen_loadYAMLValues(t *testing.T) {
 					t.Fatalf("unable to unmarshal test content: %s", err.Error())
 				}
 
-				want["Values"], err = copyMap(want)
-				if err != nil {
-					t.Fatalf("unable to copy map: %s", err.Error())
-				}
-
+				want["Values"] = copyMap(want)
 				if !reflect.DeepEqual(tr.yamlValues, want) {
 					t.Errorf("values = %v, want %v", tr.yamlValues, want)
 				}
@@ -535,14 +531,8 @@ func Test_tgen_render(t *testing.T) {
 				postDelim = "}}"
 			}
 
-			newvals, err := copyMap(tt.fields.yamlValues)
-			if err != nil {
-				t.Fatalf("unexpected error while copying map: %s", err.Error())
-			}
-			newvals["Values"], err = copyMap(newvals)
-			if err != nil {
-				t.Fatalf("unexpected error while copying values map: %s", err.Error())
-			}
+			newvals := copyMap(tt.fields.yamlValues)
+			newvals["Values"] = copyMap(newvals)
 
 			tr := &tgen{
 				Strict:              tt.fields.Strict,

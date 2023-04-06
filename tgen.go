@@ -9,6 +9,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -85,10 +86,7 @@ func (t *tgen) loadYAMLValues(yamlpath string) error {
 		return fmt.Errorf("unable to parse values file %q: %s", yamlpath, err.Error())
 	}
 
-	copied, err := copyMap(valuesfile)
-	if err != nil {
-		return fmt.Errorf("unable to duplicate values file: %s", err.Error())
-	}
+	copied := copyMap(valuesfile)
 
 	valuesfile["Values"] = copied
 	t.yamlValues = valuesfile
@@ -136,8 +134,24 @@ func (t *tgen) setDelimiters(delimiters string) error {
 	return nil
 }
 
+func mergeFuncMaps(a, b template.FuncMap) template.FuncMap {
+	if a == nil {
+		a = template.FuncMap{}
+	}
+
+	for k, v := range b {
+		_, found := a[k]
+		if !found {
+			a[k] = v
+		}
+	}
+
+	return a
+}
+
 func (t *tgen) render(w io.Writer) error {
-	baseTemplate := template.New(t.templateFileName).Funcs(getTemplateFunctions(t.envValues, t.Strict))
+	funcs := mergeFuncMaps(getTemplateFunctions(t.envValues, t.Strict), sprig.FuncMap())
+	baseTemplate := template.New(t.templateFileName).Funcs(funcs)
 
 	if t.Strict {
 		baseTemplate = baseTemplate.Option("missingkey=error")

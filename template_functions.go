@@ -1,10 +1,6 @@
 package main
 
 import (
-	"crypto/sha1"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,7 +15,7 @@ import (
 	"time"
 	"unsafe"
 
-	"golang.org/x/text/cases"
+	"github.com/Masterminds/sprig/v3"
 )
 
 func getTemplateFunctions(virtualKV map[string]string, strict bool) template.FuncMap {
@@ -27,25 +23,13 @@ func getTemplateFunctions(virtualKV map[string]string, strict bool) template.Fun
 		"raw": raw,
 
 		// Go built-ins
-		"lowercase":  strings.ToLower,
-		"lower":      strings.ToLower,
-		"tolower":    strings.ToLower,
-		"uppercase":  strings.ToUpper,
-		"upper":      strings.ToUpper,
-		"toupper":    strings.ToUpper,
-		"title":      cases.Title,
-		"sprintf":    fmt.Sprintf,
-		"printf":     fmt.Sprintf,
-		"println":    fmt.Sprintln,
-		"trim":       strings.TrimSpace,
-		"trimPrefix": strings.TrimPrefix,
-		"trimSuffix": strings.TrimSuffix,
-		"split":      strings.Split,
-		"base":       filepath.Base,
-		"dir":        filepath.Dir,
-		"clean":      filepath.Clean,
-		"ext":        filepath.Ext,
-		"isAbs":      filepath.IsAbs,
+		"lowercase": sprig.FuncMap()["lower"],
+		"tolower":   sprig.FuncMap()["lower"],
+		"uppercase": sprig.FuncMap()["upper"],
+		"toupper":   sprig.FuncMap()["upper"],
+		"sprintf":   fmt.Sprintf,
+		"printf":    fmt.Sprintf,
+		"println":   fmt.Sprintln,
 
 		// Environment functions
 		"env":        envstrict(virtualKV, strict),
@@ -53,31 +37,14 @@ func getTemplateFunctions(virtualKV map[string]string, strict bool) template.Fun
 
 		// Locally defined functions
 		"rndstring":     rndgen,
-		"repeat":        repeat,
-		"nospace":       nospace,
-		"quote":         quote,
-		"squote":        squote,
-		"indent":        indent,
-		"nindent":       nindent,
-		"b64enc":        base64encode,
-		"base64encode":  base64encode,
-		"b64dec":        base64decode,
-		"base64decode":  base64decode,
-		"sha1sum":       sha1sum,
-		"sha256sum":     sha256sum,
-		"replace":       replace,
+		"base64encode":  sprig.FuncMap()["b64enc"],
+		"base64decode":  sprig.FuncMap()["b64dec"],
 		"readfile":      readfile,
 		"readlocalfile": readlocalfile,
 		"linebyline":    linebyline,
 		"lbl":           linebyline,
-		"seq":           seq,
-		"list":          slice,
-		"slice":         slice,
 		"after":         after,
 		"skip":          after,
-		"shuffle":       shuffle,
-		"first":         first,
-		"last":          last,
 	}
 }
 
@@ -120,54 +87,6 @@ func readlocalfile(path string) (string, error) {
 func linebyline(lines string) []string {
 	return strings.Split(lines, "\n")
 }
-
-func replace(old, new, src string) string {
-	return strings.Replace(src, old, new, -1)
-}
-
-func sha256sum(input string) string {
-	hash := sha256.Sum256([]byte(input))
-	return hex.EncodeToString(hash[:])
-}
-
-func sha1sum(input string) string {
-	hash := sha1.Sum([]byte(input))
-	return hex.EncodeToString(hash[:])
-}
-
-func base64encode(v string) string {
-	return base64.StdEncoding.EncodeToString([]byte(v))
-}
-
-func base64decode(v string) (string, error) {
-	data, err := base64.StdEncoding.DecodeString(v)
-
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), nil
-}
-
-func nospace(str string) string {
-	return strings.NewReplacer(" ", "").Replace(str)
-}
-
-func repeat(count int, str string) string {
-	return strings.Repeat(str, count)
-}
-
-func indent(spaces int, v string) string {
-	pad := strings.Repeat(" ", spaces)
-	return pad + strings.Replace(v, "\n", "\n"+pad, -1)
-}
-
-func nindent(spaces int, v string) string {
-	return "\n" + indent(spaces, v)
-}
-
-func quote(s string) string  { return `"` + s + `"` }
-func squote(s string) string { return `'` + s + `'` }
 
 func envstrict(kv map[string]string, strict bool) func(s string) (string, error) {
 	return func(s string) (string, error) {
@@ -232,71 +151,6 @@ func rndgen(n int) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
 
-func seq(values ...int) ([]int, error) {
-	var start, step, end int
-
-	switch len(values) {
-	case 1:
-		start = 1
-		step = 1
-		end = values[0]
-
-	case 2:
-		start = values[0]
-		step = 1
-		end = values[1]
-
-	case 3:
-		start = values[0]
-		step = values[1]
-		end = values[2]
-
-	default:
-		return nil, fmt.Errorf("seq: incorrect number of arguments: %d", len(values))
-	}
-
-	if step == 0 {
-		return nil, fmt.Errorf("seq: step cannot be zero")
-	}
-
-	if start < end && step < 0 {
-		return nil, fmt.Errorf("seq: increment must be > 0 since %d < %d", start, end)
-	}
-	if start > end && step > 0 {
-		return nil, fmt.Errorf("seq: increment must be > 0 since %d > %d", start, end)
-	}
-
-	size := 0
-	posstep := step
-	if step < 0 {
-		posstep = -step
-	}
-
-	if end >= start {
-		size = (((end - start) / posstep) + 1)
-	} else {
-		size = (((start - end) / posstep) + 1)
-
-	}
-
-	result := make([]int, int(size))
-	value := start
-	for i := 0; ; i++ {
-		result[i] = value
-		value += step
-
-		if (step < 0 && value < end) || (step > 0 && value > end) {
-			break
-		}
-	}
-
-	return result, nil
-}
-
-func slice(values ...interface{}) []interface{} {
-	return values
-}
-
 // after slices an array to only the items after the Nth item.
 func after(index any, seq any) (any, error) {
 	if index == nil || seq == nil {
@@ -331,90 +185,6 @@ func after(index any, seq any) (any, error) {
 	}
 
 	return seqv.Slice(indexv, seqv.Len()).Interface(), nil
-}
-
-func shuffle(seq any) (any, error) {
-	if seq == nil {
-		return nil, errors.New("seq must be provided")
-	}
-
-	seqv := reflect.ValueOf(seq)
-	seqv, isNil := indirectValue(seqv)
-	if isNil {
-		return nil, errors.New("can't iterate over a nil value")
-	}
-
-	if seqv.Len() == 0 {
-		return nil, errors.New("can't shuffle an empty sequence")
-	}
-
-	switch seqv.Kind() {
-	case reflect.Array, reflect.Slice, reflect.String:
-		// skip
-	default:
-		return nil, errors.New("can't iterate over " + reflect.ValueOf(seq).Type().String())
-	}
-
-	shuffled := reflect.MakeSlice(reflect.TypeOf(seq), seqv.Len(), seqv.Len())
-
-	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-	randomIndices := rnd.Perm(seqv.Len())
-
-	for index, value := range randomIndices {
-		shuffled.Index(value).Set(seqv.Index(index))
-	}
-
-	return shuffled.Interface(), nil
-}
-
-func first(seq any) (any, error) {
-	if seq == nil {
-		return nil, errors.New("seq must be provided")
-	}
-
-	seqv := reflect.ValueOf(seq)
-	seqv, isNil := indirectValue(seqv)
-	if isNil {
-		return nil, errors.New("can't iterate over a nil value")
-	}
-
-	switch seqv.Kind() {
-	case reflect.Array, reflect.Slice, reflect.String:
-		// okay
-	default:
-		return nil, errors.New("can't iterate over " + reflect.ValueOf(seq).Type().String())
-	}
-
-	if seqv.Len() == 0 {
-		return nil, errors.New("can't get first item of an empty sequence")
-	}
-
-	return seqv.Index(0).Interface(), nil
-}
-
-func last(seq any) (any, error) {
-	if seq == nil {
-		return nil, errors.New("seq must be provided")
-	}
-
-	seqv := reflect.ValueOf(seq)
-	seqv, isNil := indirectValue(seqv)
-	if isNil {
-		return nil, errors.New("can't iterate over a nil value")
-	}
-
-	switch seqv.Kind() {
-	case reflect.Array, reflect.Slice, reflect.String:
-		// okay
-	default:
-		return nil, errors.New("can't iterate over " + reflect.ValueOf(seq).Type().String())
-	}
-
-	if seqv.Len() == 0 {
-		return nil, errors.New("can't get last item of an empty sequence")
-	}
-
-	return seqv.Index(seqv.Len() - 1).Interface(), nil
 }
 
 func toInt(v interface{}) (int, bool) {
