@@ -23,3 +23,10 @@ jobs:
           distribution: goreleaser
           version: latest
           args: release --snapshot --skip-publish --clean
+      - name: Create temporary download for this PR for 1d
+        uses: actions/upload-artifact@v3
+        with:
+          name: downloads
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
