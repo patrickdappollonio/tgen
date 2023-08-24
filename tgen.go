@@ -3,14 +3,16 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 type tgen struct {
@@ -190,18 +192,47 @@ func (t *tgen) render(w io.Writer) error {
 	return err
 }
 
+// reExtractLocation is used to extract the line number from the error message
+// as a string like "/foo/bar:1:18"
+var reExtractLocation = regexp.MustCompile(`\s([^:]*:\d+:\d+):`)
+
 func (t *tgen) replaceTemplateRenderError(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	if _, ok := err.(template.ExecError); ok {
-		if strings.Contains(err.Error(), "environment variable not found") {
-			return &enotfounderr{name: err.Error()[strings.LastIndex(err.Error(), ": $")+3:]}
+	// Go templates won't propagate the error message back to the caller, so the
+	// only way to know what happened is to parse the error message and return
+	// a more meaningful error.
+	if t, ok := err.(template.ExecError); ok {
+
+		// Check if we can unwrap the error bubbled up from the template
+		if unwrap := errors.Unwrap(t.Err); unwrap != nil {
+			// The original error does not provide enough contextual information
+			// to know where the error happened, so we need to extract the line
+			// number from the error message
+			matchExpr := reExtractLocation.FindStringSubmatch(t.Err.Error())
+			match := ""
+			if len(matchExpr) > 0 {
+				match = matchExpr[1]
+			}
+
+			switch unwrap.(type) {
+			case *requiredError, *notFoundErr:
+				return &templateFuncError{line: match, original: unwrap}
+			default:
+				// do nothing, the next section will take care
+				// of checking for additional items
+			}
 		}
 
-		if strings.Contains(err.Error(), "map has no entry for key") {
-			return &emissingkeyerr{name: err.Error()[strings.LastIndex(err.Error(), ":")+2:]}
+		// If we can't unwrap, it means we're dealing with string-based errors
+		// which are even harder to validate
+		switch {
+		case strings.Contains(err.Error(), "map has no entry for key"):
+			return &missingKeyErr{name: err.Error()[strings.LastIndex(err.Error(), ":")+2:]}
+		default:
+			return t.Err
 		}
 	}
 

@@ -15,7 +15,7 @@ func command(w io.Writer, c conf) error {
 
 	// Read template from "-x" or "--execute" flag
 	if c.stdinTemplateFile != "" {
-		tg.setTemplate("-", c.stdinTemplateFile)
+		tg.setTemplate(os.Stdin.Name(), c.stdinTemplateFile)
 	}
 
 	// Read template file (either from "--file" or stdin)
@@ -23,7 +23,7 @@ func command(w io.Writer, c conf) error {
 		var err error
 		switch pathToOpen {
 		case "-":
-			err = tg.loadTemplateFile("", os.Stdin)
+			err = tg.loadTemplateFile(os.Stdin.Name(), os.Stdin)
 		default:
 			err = tg.loadTemplatePath(pathToOpen)
 		}

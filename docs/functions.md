@@ -13,6 +13,7 @@
     - [`readfile`, `readlocalfile`](#readfile-readlocalfile)
     - [`linebyline`, `lbl`](#linebyline-lbl)
     - [`after`, `skip`](#after-skip)
+    - [`required`](#required)
 
 All examples below have been generated using `-x` -- or `--execute`, which allows passing a template as argument rather than reading a file. In either case, whether the template file -- with `-f` or `--file` -- or the template argument is used, all functions are available.
 
@@ -91,6 +92,8 @@ Both `env` and `envdefault` are case insensitive -- either `"home"` or `"HOME"` 
 
 When `--strict` mode is enabled, if `env` is called with a environment variable name with no value set or set to empty, the application will exit with error. Useful if you must receive a value or fail a CI build, for example.
 
+Consider the following example reading these environment variables:
+
 ```bash
 $ tgen -x '{{ env "user" }}'
 patrick
@@ -99,15 +102,21 @@ $ tgen -x '{{ env "USER" }}'
 patrick
 ```
 
-```bash
-$ tgen -x '{{ env "foobar" }}' -s
-Error: strict mode on: environment variable not found: $FOOBAR
-```
+Then trying to read a nonexistent environment variable with `--strict` mode enabled:
 
 ```bash
-$ tgen -x '{{ envdefault "SQL_HOST" "sql.example.com" }}'
+$ tgen -x '{{ env "foobar" }}' --strict
+Error: evaluating /dev/stdin:1:3: strict mode on: environment variable not found: $FOOBAR
+```
+
+And bypassing strict mode by setting a default value:
+
+```bash
+$ tgen -x '{{ envdefault "SQL_HOST" "sql.example.com" }}' --strict
 sql.example.com
 ```
+
+For custom messages, [consider using `required` instead](#required).
 
 ### `rndstring`
 
@@ -198,4 +207,20 @@ $ tgen -x '{{ after 2 (seq 5) }}'
 # Alternate way of writing it
 $ tgen -x '{{ seq 5 | after 2 }}'
 [3 4 5]
+```
+
+### `required`
+
+Returns an error if the value is empty. Useful to ensure a value is provided, and if not, fail the template generation.
+
+```bash
+$ tgen -x '{{ env "foo" | required "environment variable \"foo\" is required" }}'
+Error: evaluating /dev/stdin:1:15: environment variable "foo" is required
+```
+
+Note that you can also use `--strict` mode to achieve a similar result. The difference between `--strict` and `required` is that `required` works anywhere: not just on missing YAML value keys or environment variables. Here's another example:
+
+```bash
+$ tgen -x '{{ "" | required "Value must be set" }}'
+Error: evaluating /dev/stdin:1:8: Value must be set
 ```

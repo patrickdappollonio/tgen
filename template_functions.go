@@ -16,11 +16,13 @@ import (
 	"unsafe"
 
 	"github.com/Masterminds/sprig/v3"
+	"sigs.k8s.io/yaml"
 )
 
 func getTemplateFunctions(virtualKV map[string]string, strict bool) template.FuncMap {
 	return template.FuncMap{
-		"raw": raw,
+		"raw":      raw,
+		"required": requiredField,
 
 		// Go built-ins
 		"lowercase": sprig.FuncMap()["lower"],
@@ -45,7 +47,49 @@ func getTemplateFunctions(virtualKV map[string]string, strict bool) template.Fun
 		"lbl":           linebyline,
 		"after":         after,
 		"skip":          after,
+
+		"asMap":  asMap,
+		"toYAML": toYAML,
 	}
+}
+
+// requireField returns an error if the given value is nil or an empty string.
+func requiredField(warn string, val interface{}) (interface{}, error) {
+	if val == nil {
+		return val, &requiredError{msg: warn}
+	}
+
+	if s, ok := val.(string); ok && s == "" {
+		return val, &requiredError{msg: warn}
+	}
+
+	return val, nil
+}
+
+// toYAML takes an interface, marshals it to yaml, and returns a string. It will
+// always return a string, even on marshal error (empty string).
+//
+// This is designed to be called from a template.
+func toYAML(v interface{}) string {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		// Swallow errors inside of a template.
+		return ""
+	}
+	return strings.TrimSuffix(string(data), "\n")
+}
+
+func asMap(m any) map[string]any {
+	if m == nil {
+		return nil
+	}
+
+	newmap, ok := m.(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	return newmap
 }
 
 func raw(s string) string {
@@ -116,7 +160,7 @@ func envfunc(k string, kv map[string]string, strictMode bool) (string, error) {
 	}
 
 	if strictMode {
-		return "", &enotfounderr{name: k}
+		return "", &notFoundErr{name: k}
 	}
 
 	return "", nil

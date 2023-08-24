@@ -35,7 +35,7 @@ func run() error {
 	}
 
 	root.Flags().StringVarP(&configs.environmentFile, "environment", "e", "", "an optional environment file to use (key=value formatted) to perform replacements")
-	root.Flags().StringVarP(&configs.templateFilePath, "file", "f", "", "the template file to process")
+	root.Flags().StringVarP(&configs.templateFilePath, "file", "f", "", "the template file to process, or \"-\" to read from stdin")
 	root.Flags().StringVarP(&configs.customDelimiters, "delimiter", "d", "", `template delimiter (default "{{}}")`)
 	root.Flags().StringVarP(&configs.stdinTemplateFile, "execute", "x", "", "a raw template to execute directly, without providing --file")
 	root.Flags().StringVarP(&configs.valuesFile, "values", "v", "", "a file containing values to use for the template, a la Helm")
