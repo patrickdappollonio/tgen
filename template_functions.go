@@ -16,7 +16,7 @@ import (
 	"unsafe"
 
 	"github.com/Masterminds/sprig/v3"
-	"sigs.k8s.io/yaml"
+	"gopkg.in/yaml.v3"
 )
 
 func getTemplateFunctions(virtualKV map[string]string, strict bool) template.FuncMap {
