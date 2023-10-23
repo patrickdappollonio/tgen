@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/patrickdappollonio/tgen/tfuncs"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,7 +37,7 @@ func (t *tgen) loadTemplatePath(templatepath string) error {
 		return fmt.Errorf("template path is empty")
 	}
 
-	bf, err := readfile(templatepath)
+	bf, err := tfuncs.ReadFile(templatepath)
 	if err != nil {
 		return err
 	}
@@ -79,7 +80,7 @@ func (t *tgen) loadYAMLValues(yamlpath string) error {
 
 	valuesfile := map[string]any{}
 
-	bf, err := readfile(yamlpath)
+	bf, err := tfuncs.ReadFile(yamlpath)
 	if err != nil {
 		return err
 	}
@@ -102,7 +103,7 @@ func (t *tgen) loadEnvValues(envpath string) error {
 		return nil
 	}
 
-	data, err := readfile(envpath)
+	data, err := tfuncs.ReadFile(envpath)
 	if err != nil {
 		return err
 	}
@@ -152,7 +153,7 @@ func mergeFuncMaps(a, b template.FuncMap) template.FuncMap {
 }
 
 func (t *tgen) render(w io.Writer) error {
-	funcs := mergeFuncMaps(getTemplateFunctions(t.envValues, t.Strict), sprig.FuncMap())
+	funcs := mergeFuncMaps(tfuncs.GetFunctions(t.envValues, t.Strict), sprig.FuncMap())
 	baseTemplate := template.New(t.templateFileName).Funcs(funcs)
 
 	if t.Strict {
@@ -218,7 +219,7 @@ func (t *tgen) replaceTemplateRenderError(err error) error {
 			}
 
 			switch unwrap.(type) {
-			case *requiredError, *notFoundErr:
+			case *tfuncs.ErrRequired, *tfuncs.ErrVarNotFound:
 				return &templateFuncError{line: match, original: unwrap}
 			default:
 				// do nothing, the next section will take care
