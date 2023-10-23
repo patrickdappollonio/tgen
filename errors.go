@@ -2,14 +2,6 @@ package main
 
 import "fmt"
 
-type requiredError struct {
-	msg string
-}
-
-func (r requiredError) Error() string {
-	return r.msg
-}
-
 type templateFuncError struct {
 	line     string
 	original error
@@ -25,12 +17,6 @@ func (t templateFuncError) Error() string {
 
 func (t templateFuncError) Unwrap() error {
 	return t.original
-}
-
-type notFoundErr struct{ name string }
-
-func (e *notFoundErr) Error() string {
-	return "strict mode on: environment variable not found: $" + e.name
 }
 
 type missingKeyErr struct{ name string }
