@@ -2,7 +2,7 @@ module github.com/patrickdappollonio/tgen
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
