@@ -22,7 +22,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --snapshot --skip-publish --clean
+          args: release --snapshot --skip=publish --clean
       - name: Create temporary download for this PR for 1d
         uses: actions/upload-artifact@v4
         with:
