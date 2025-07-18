@@ -88,4 +88,4 @@ For more details, see the ["Kubernetes and Helm-style values" documentation page
 
 ## Template functions
 
-See [template functions](docs/functions.md) for a list of all the functions available.
+See [template functions](docs/functions.md) for a list of all the functions available. This tool supports both the [Sprig](https://masterminds.github.io/sprig/) and [Go Template](https://pkg.go.dev/text/template) libraries.

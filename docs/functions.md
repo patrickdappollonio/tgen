@@ -11,6 +11,7 @@
     - [`rndstring`](#rndstring)
     - [`base64encode`, `base64decode`](#base64encode-base64decode)
     - [`readfile`, `readlocalfile`](#readfile-readlocalfile)
+    - [`readdir`, `readlocaldir`, `readdirrecursive`, `readlocaldirrecursive`](#readdir-readlocaldir-readdirrecursive-readlocaldirrecursive)
     - [`linebyline`, `lbl`](#linebyline-lbl)
     - [`after`, `skip`](#after-skip)
     - [`required`](#required)
@@ -177,6 +178,73 @@ Some considerations:
   * Only files within the current working directory and its subdirectories can be read through this function.
 
 For a more complete example, see [Template Generation _a la Helm_](#template-generation-a-la-helm).
+
+### `readdir`, `readlocaldir`, `readdirrecursive`, `readlocaldirrecursive`
+
+Read a directory from a local path -- either relative or absolute -- and returns it as an array of strings, which can be used to iterate over the files in the directory.
+
+`readdir` and `readlocaldir` do not recurse into subdirectories, while `readdirrecursive` and `readlocaldirrecursive` do.
+
+```bash
+$ tree testdata
+testdata
+├── file1.txt
+└── file2.txt
+
+$ tgen -x '{{ readdir "testdata" }}'
+[file1.txt file2.txt]
+```
+
+```bash
+$ tgen -x '{{ readlocaldir "testdata" }}'
+[file1.txt file2.txt]
+```
+
+Attempting to read a directory that does not exist will return an error:
+
+```bash
+$ tgen -x '{{ readdir "doesnotexist" }}'
+Error: template: tgen:1:3: executing "tgen" at <readdir "doesnotexist">: error calling readdir: open doesnotexist: no such file or directory
+```
+
+And attempting to read a directory outside the current working directory with `readlocaldir` will return an error:
+
+```bash
+$ tgen -x '{{ readlocaldir "../testdata" }}'
+Error: template: tgen:1:3: executing "tgen" at <readlocaldir "../testdata">: error calling readlocaldir: unable to open local directory "../testdata": directory is not under current working directory
+```
+
+With the recursive functions, the same rules apply but they will also include the files and folders in the subdirectories. Folders will be returned as strings with a trailing `/`.
+
+```bash
+$ tree testdata
+testdata
+├── file1.txt
+├── file2.txt
+└── subdir
+    ├── subfile1.txt
+    └── subfile2.txt
+
+$ tgen -x '{{ readdirrecursive "testdata" }}'
+[file1.txt file2.txt subdir/ subdir/subfile1.txt subdir/subfile2.txt]
+```
+
+```bash
+$ tgen -x '{{ readlocaldirrecursive "testdata" }}'
+[file1.txt file2.txt subdir/ subdir/subfile1.txt subdir/subfile2.txt]
+```
+
+Some considerations:
+
+* Symbolic links are not followed.
+* If a relative path is provided, all paths must be relative to the current working directory.
+* For `readdir` and `readdirrecursive`, the path can be either relative or absolute:
+  * Any directory can be read through `readdir`, and yes, that includes `/etc` and other sensitive files. If this level of security is important to you, consider running `tgen` in trusted environments. This is by design to allow embedding files from other folders external to the current working directory and its subdirectories.
+  * If reading any directory is a problem, consider using `readlocaldir` or `readlocaldirrecursive`.
+* For `readlocaldir` and `readlocaldirrecursive`, the path can only be relative:
+  * Absolute paths will return in an error.
+  * The current working directory will be prepended to the path provided.
+  * Only directories within the current working directory and its subdirectories can be read through this function.
 
 ### `linebyline`, `lbl`
 
