@@ -14,6 +14,8 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/patrickdappollonio/tgen/tfuncs"
 	"gopkg.in/yaml.v3"
+
+	"github.com/patrickdappollonio/tgen/internal/setflags"
 )
 
 type tgen struct {
@@ -59,7 +61,6 @@ func (t *tgen) loadTemplateFile(overwriteName string, f *os.File) error {
 
 	var buf bytes.Buffer
 	read, err := io.Copy(&buf, f)
-
 	if err != nil {
 		return fmt.Errorf("unable to read template file %q: %w", name, err)
 	}
@@ -121,6 +122,80 @@ func (t *tgen) loadEnvValues(envpath string) error {
 	}
 
 	t.envValues = envVars
+	return nil
+}
+
+// parseSetValues parses Helm-style --set values into a nested map structure with type inference
+func (t *tgen) parseSetValues(setValues []string) (map[string]any, error) {
+	return setflags.ParseSetValues(setValues)
+}
+
+// parseSetStringValues parses Helm-style --set-string values into a nested map structure (all values as strings)
+func (t *tgen) parseSetStringValues(setValues []string) (map[string]any, error) {
+	return setflags.ParseSetStringValues(setValues)
+}
+
+// mergeSetValues parses set values and merges them with existing YAML values
+func (t *tgen) mergeSetValues(setValues []string) error {
+	setParsed, err := t.parseSetValues(setValues)
+	if err != nil {
+		return err
+	}
+
+	// If no YAML values exist, create the structure
+	if t.yamlValues == nil {
+		t.yamlValues = make(map[string]any)
+	}
+
+	// Extract the non-Values part from existing YAML values
+	existingValues := make(map[string]any)
+	for k, v := range t.yamlValues {
+		if k != "Values" {
+			existingValues[k] = v
+		}
+	}
+
+	// Merge the set values with existing values (excluding Values key)
+	// Set values take precedence over YAML values
+	merged := mergeMap(existingValues, setParsed)
+
+	// Create a copy for the Values key (similar to loadYAMLValues)
+	copied := copyMap(merged)
+	merged["Values"] = copied
+
+	t.yamlValues = merged
+	return nil
+}
+
+// mergeSetStringValues parses set-string values and merges them with existing YAML values
+func (t *tgen) mergeSetStringValues(setStringValues []string) error {
+	setParsed, err := t.parseSetStringValues(setStringValues)
+	if err != nil {
+		return err
+	}
+
+	// If no YAML values exist, create the structure
+	if t.yamlValues == nil {
+		t.yamlValues = make(map[string]any)
+	}
+
+	// Extract the non-Values part from existing YAML values
+	existingValues := make(map[string]any)
+	for k, v := range t.yamlValues {
+		if k != "Values" {
+			existingValues[k] = v
+		}
+	}
+
+	// Merge the set-string values with existing values (excluding Values key)
+	// Set-string values take precedence over YAML values
+	merged := mergeMap(existingValues, setParsed)
+
+	// Create a copy for the Values key (similar to loadYAMLValues)
+	copied := copyMap(merged)
+	merged["Values"] = copied
+
+	t.yamlValues = merged
 	return nil
 }
 

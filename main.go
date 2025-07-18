@@ -20,7 +20,7 @@ func run() error {
 	var configs conf
 	var withValues bool
 
-	var root = &cobra.Command{
+	root := &cobra.Command{
 		Use:          appName,
 		Short:        appName + " is a template generator with the power of Go Templates",
 		Version:      version,
@@ -41,6 +41,8 @@ func run() error {
 	root.Flags().StringVarP(&configs.valuesFile, "values", "v", "", "a file containing values to use for the template, a la Helm")
 	root.Flags().BoolVar(&withValues, "with-values", false, "automatically include a values.yaml file from the current working directory")
 	root.Flags().BoolVarP(&configs.strictMode, "strict", "s", false, "strict mode: if an environment variable or value is used in the template but not set, it fails rendering")
+	root.Flags().StringArrayVar(&configs.setValues, "set", []string{}, "set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
+	root.Flags().StringArrayVar(&configs.setStringValues, "set-string", []string{}, "set STRING values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
 
 	root.Flags().SortFlags = false
 

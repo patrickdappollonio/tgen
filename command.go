@@ -54,6 +54,20 @@ func command(w io.Writer, c conf) error {
 		}
 	}
 
+	// Parse and merge set values
+	if len(c.setValues) > 0 {
+		if err := tg.mergeSetValues(c.setValues); err != nil {
+			return err
+		}
+	}
+
+	// Parse and merge set-string values
+	if len(c.setStringValues) > 0 {
+		if err := tg.mergeSetStringValues(c.setStringValues); err != nil {
+			return err
+		}
+	}
+
 	// Render code
 	return tg.render(w)
 }

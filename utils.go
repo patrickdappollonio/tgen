@@ -50,3 +50,32 @@ func copyMap(m map[string]any) map[string]any {
 
 	return cp
 }
+
+// mergeMap deeply merges two maps, with values from the second map taking precedence
+func mergeMap(dest, src map[string]any) map[string]any {
+	if dest == nil {
+		dest = make(map[string]any)
+	}
+
+	result := copyMap(dest)
+
+	for k, v := range src {
+		if srcMap, ok := v.(map[string]any); ok {
+			if destMap, exists := result[k]; exists {
+				if destMapTyped, ok := destMap.(map[string]any); ok {
+					result[k] = mergeMap(destMapTyped, srcMap)
+				} else {
+					// If destination is not a map, replace it
+					result[k] = copyMap(srcMap)
+				}
+			} else {
+				result[k] = copyMap(srcMap)
+			}
+		} else {
+			// For non-map values, the source value takes precedence
+			result[k] = v
+		}
+	}
+
+	return result
+}

@@ -176,11 +176,11 @@ Some considerations:
   * The current working directory will be prepended to the path provided.
   * Only files within the current working directory and its subdirectories can be read through this function.
 
-For a more complete example, see [Template Generation _a la Helm_](#template-generation-a-la-helm).
+For a more complete example, see [Template Generation _a la Helm_](helm-style-values.md).
 
 ### `linebyline`, `lbl`
 
-Parses the input and splits on line breaks. `linebyline` is a shorcut for [`split`](#split) with a split character of `\n`. `lbl` is an alias of `linebyline`:
+Parses the input and splits on line breaks. `linebyline` is a shorcut for `split` (from the Sprig library) with a split character of `\n`. `lbl` is an alias of `linebyline`:
 
 ```bash
 $ tgen -x '{{ linebyline "foo\nbar" }}'
