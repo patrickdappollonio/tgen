@@ -7,4 +7,6 @@ type conf struct {
 	valuesFile        string
 	strictMode        bool
 	customDelimiters  string
+	setValues         []string
+	setStringValues   []string
 }
