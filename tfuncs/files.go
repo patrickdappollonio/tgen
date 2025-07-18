@@ -22,7 +22,7 @@ func ReadFile(path string) (string, error) {
 	return string(contents), nil
 }
 
-// readlocalfile reads the contents of a file and returns it as a string, but only allows
+// readLocalFile reads the contents of a file and returns it as a string, but only allows
 // relative paths within the current working directory and its subdirectories.
 // This function provides security by preventing access to files outside the current
 // working directory through path traversal attacks.
@@ -32,7 +32,7 @@ func ReadFile(path string) (string, error) {
 //   - The resolved path is outside the current working directory
 //   - The path points to a directory instead of a file
 //   - The file cannot be read
-func readlocalfile(path string) (string, error) {
+func readLocalFile(path string) (string, error) {
 	if filepath.IsAbs(path) {
 		return "", fmt.Errorf("unable to open local file %q: path is absolute, only relative paths are allowed on \"readlocalfile\"", path)
 	}
@@ -55,14 +55,14 @@ func readlocalfile(path string) (string, error) {
 	return ReadFile(cleanpath)
 }
 
-// ReadDir reads the contents of a directory and returns a sorted slice of entry names.
+// readDir reads the contents of a directory and returns a sorted slice of entry names.
 // Directories are returned with a trailing "/" to distinguish them from files.
 // The path can be either relative or absolute. This function can read any directory
 // that the process has access to, including system directories.
 //
 // The returned slice is sorted alphabetically for consistent output.
 // Symbolic links are not followed.
-func ReadDir(path string) ([]string, error) {
+func readDir(path string) ([]string, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func ReadDir(path string) ([]string, error) {
 	return result, nil
 }
 
-// readlocaldir reads the contents of a directory and returns a sorted slice of entry names,
+// readLocalDir reads the contents of a directory and returns a sorted slice of entry names,
 // but only allows relative paths within the current working directory and its subdirectories.
 // Directories are returned with a trailing "/" to distinguish them from files.
 // This function provides security by preventing access to directories outside the current
@@ -94,7 +94,7 @@ func ReadDir(path string) ([]string, error) {
 //   - The path is absolute
 //   - The resolved path is outside the current working directory
 //   - The directory cannot be read
-func readlocaldir(path string) ([]string, error) {
+func readLocalDir(path string) ([]string, error) {
 	if filepath.IsAbs(path) {
 		return nil, fmt.Errorf("unable to open local directory %q: path is absolute, only relative paths are allowed on \"readlocaldir\"", path)
 	}
@@ -110,10 +110,10 @@ func readlocaldir(path string) ([]string, error) {
 		return nil, fmt.Errorf("unable to open local directory %q: directory is not under current working directory", cleanpath)
 	}
 
-	return ReadDir(cleanpath)
+	return readDir(cleanpath)
 }
 
-// ReadDirRecursive reads the contents of a directory recursively and returns a sorted slice
+// readDirRecursive reads the contents of a directory recursively and returns a sorted slice
 // of all file and directory paths relative to the root directory. Directories are returned
 // with a trailing "/" to distinguish them from files. The path can be either relative or
 // absolute. This function can read any directory that the process has access to, including
@@ -132,7 +132,7 @@ func readlocaldir(path string) ([]string, error) {
 //	    └── subfile.txt
 //
 // The function would return: ["file1.txt", "file2.txt", "subdir/", "subdir/subfile.txt"]
-func ReadDirRecursive(path string) ([]string, error) {
+func readDirRecursive(path string) ([]string, error) {
 	var result []string
 
 	err := filepath.WalkDir(path, func(walkPath string, d fs.DirEntry, err error) error {
@@ -170,7 +170,7 @@ func ReadDirRecursive(path string) ([]string, error) {
 	return result, nil
 }
 
-// readlocaldirrecursive reads the contents of a directory recursively and returns a sorted
+// readLocalDirRecursive reads the contents of a directory recursively and returns a sorted
 // slice of all file and directory paths relative to the root directory, but only allows
 // relative paths within the current working directory and its subdirectories.
 // Directories are returned with a trailing "/" to distinguish them from files.
@@ -195,7 +195,7 @@ func ReadDirRecursive(path string) ([]string, error) {
 //	    └── subfile.txt
 //
 // The function would return: ["file1.txt", "file2.txt", "subdir/", "subdir/subfile.txt"]
-func readlocaldirrecursive(path string) ([]string, error) {
+func readLocalDirRecursive(path string) ([]string, error) {
 	if filepath.IsAbs(path) {
 		return nil, fmt.Errorf("unable to open local directory %q: path is absolute, only relative paths are allowed on \"readlocaldirrecursive\"", path)
 	}
@@ -211,5 +211,5 @@ func readlocaldirrecursive(path string) ([]string, error) {
 		return nil, fmt.Errorf("unable to open local directory %q: directory is not under current working directory", cleanpath)
 	}
 
-	return ReadDirRecursive(cleanpath)
+	return readDirRecursive(cleanpath)
 }

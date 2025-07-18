@@ -67,7 +67,7 @@ func Test_ReadDir(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ReadDir(tt.path)
+			got, err := readDir(tt.path)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ReadDir() error = %v, wantErr %v", err, tt.wantErr)
@@ -126,7 +126,7 @@ func Test_readlocaldir(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := readlocaldir(tt.path)
+			got, err := readLocalDir(tt.path)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("readlocaldir() error = %v, wantErr %v", err, tt.wantErr)
@@ -181,7 +181,7 @@ func Test_ReadDirRecursive(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ReadDirRecursive(tt.path)
+			got, err := readDirRecursive(tt.path)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ReadDirRecursive() error = %v, wantErr %v", err, tt.wantErr)
@@ -253,7 +253,7 @@ func Test_readlocaldirrecursive(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := readlocaldirrecursive(tt.path)
+			got, err := readLocalDirRecursive(tt.path)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("readlocaldirrecursive() error = %v, wantErr %v", err, tt.wantErr)
@@ -271,7 +271,7 @@ func Test_ReadDir_DirectoryTrailingSlash(t *testing.T) {
 	testDir := setupTestDir(t)
 
 	// Test that directories have trailing slash
-	got, err := ReadDir(testDir)
+	got, err := readDir(testDir)
 	if err != nil {
 		t.Fatalf("ReadDir() error = %v", err)
 	}
@@ -301,7 +301,7 @@ func Test_ReadDirRecursive_DirectoryTrailingSlash(t *testing.T) {
 	testDir := setupTestDir(t)
 
 	// Test that directories have trailing slash in recursive mode
-	got, err := ReadDirRecursive(testDir)
+	got, err := readDirRecursive(testDir)
 	if err != nil {
 		t.Fatalf("ReadDirRecursive() error = %v", err)
 	}
